@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Calendar, Gauge } from "lucide-react";
+import VehicleFormDialog from "@/components/VehicleFormDialog";
 
 const vehicles = [
   {
@@ -84,6 +85,7 @@ const colorMap: Record<string, string> = {
 
 export default function Veiculos() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const filteredVehicles = vehicles.filter(
     (vehicle) =>
@@ -102,7 +104,7 @@ export default function Veiculos() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Veículos</h1>
             <p className="text-muted-foreground">Gerencie todos os veículos cadastrados</p>
           </div>
-          <Button className="gap-2 bg-gradient-accent hover:opacity-90">
+          <Button className="gap-2 bg-gradient-accent hover:opacity-90" onClick={() => setDialogOpen(true)}>
             <Plus className="w-4 h-4" />
             Novo Veículo
           </Button>
@@ -183,6 +185,8 @@ export default function Veiculos() {
           ))}
         </div>
       </div>
+
+      <VehicleFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }
