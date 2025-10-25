@@ -1,15 +1,29 @@
-import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Wrench, Users, Car } from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { LayoutDashboard, Wrench, Users, Car, UserCog, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Ordens de Serviço", href: "/ordens", icon: Wrench },
-  { name: "Clientes", href: "/clientes", icon: Users },
-  { name: "Veículos", href: "/veiculos", icon: Car },
+const navigationItems = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ['admin', 'funcionario'] },
+  { name: "Ordens de Serviço", href: "/ordens", icon: Wrench, roles: ['admin'] },
+  { name: "Clientes", href: "/clientes", icon: Users, roles: ['admin'] },
+  { name: "Veículos", href: "/veiculos", icon: Car, roles: ['admin'] },
+  { name: "Usuários", href: "/usuarios", icon: UserCog, roles: ['admin'] },
 ];
 
 export default function Layout() {
+  const { user, logout, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  const navigation = navigationItems.filter(item => 
+    item.roles.includes(user?.role || 'funcionario')
+  );
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
@@ -52,16 +66,29 @@ export default function Layout() {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-border">
+          <div className="p-4 border-t border-border space-y-3">
             <div className="flex items-center gap-3 px-3 py-2">
               <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center">
-                <span className="text-sm font-semibold text-accent-foreground">A</span>
+                <span className="text-sm font-semibold text-accent-foreground">
+                  {user?.name.charAt(0).toUpperCase()}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">Admin</p>
-                <p className="text-xs text-muted-foreground truncate">admin@autogest.com</p>
+                <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {isAdmin ? 'Administrador' : 'Funcionário'}
+                </p>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full justify-start gap-2"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </Button>
           </div>
         </div>
       </aside>
