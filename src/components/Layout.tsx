@@ -5,23 +5,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
 const navigationItems = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ['admin', 'funcionario'] },
-  { name: "Ordens de Serviço", href: "/ordens", icon: Wrench, roles: ['admin', 'funcionario'] },
-  { name: "Clientes", href: "/clientes", icon: Users, roles: ['admin', 'funcionario'] },
-  { name: "Veículos", href: "/veiculos", icon: Car, roles: ['admin', 'funcionario'] },
-  { name: "Usuários", href: "/usuarios", icon: UserCog, roles: ['admin'] },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ['dono', 'mecanico'] },
+  { name: "Ordens de Serviço", href: "/ordens", icon: Wrench, roles: ['dono', 'mecanico'] },
+  { name: "Clientes", href: "/clientes", icon: Users, roles: ['dono', 'mecanico'] },
+  { name: "Veículos", href: "/veiculos", icon: Car, roles: ['dono', 'mecanico'] },
+  { name: "Usuários", href: "/usuarios", icon: UserCog, roles: ['dono'] },
 ];
 
+const roleLabel: Record<'dono' | 'mecanico', string> = {
+  dono: 'Dono',
+  mecanico: 'Mecânico',
+};
+
 export default function Layout() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isOwner } = useAuth();
   const navigate = useNavigate();
 
-  const navigation = navigationItems.filter(item => 
-    item.roles.includes(user?.role || 'funcionario')
+  const navigation = navigationItems.filter((item) =>
+    item.roles.includes(user?.role ?? 'mecanico')
   );
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
   return (
@@ -70,13 +75,13 @@ export default function Layout() {
             <div className="flex items-center gap-3 px-3 py-2">
               <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center">
                 <span className="text-sm font-semibold text-accent-foreground">
-                  {user?.name.charAt(0).toUpperCase()}
+                  {(user?.name?.charAt(0)?.toUpperCase() ?? '?')}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {isAdmin ? 'Administrador' : 'Funcionário'}
+                  {user ? roleLabel[user.role] : 'Usuário'}
                 </p>
               </div>
             </div>

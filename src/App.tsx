@@ -30,7 +30,7 @@ const App = () => (
               <Route path="ordens" element={<Ordens />} />
               <Route path="clientes" element={<Clientes />} />
               <Route path="veiculos" element={<Veiculos />} />
-              <Route path="usuarios" element={<ProtectedRoute requireAdmin><UserManagement /></ProtectedRoute>} />
+              <Route path="usuarios" element={<ProtectedRoute requireOwner><UserManagement /></ProtectedRoute>} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

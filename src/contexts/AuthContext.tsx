@@ -1,20 +1,25 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { login as loginRequest, logout as logoutRequest } from '@/services/gearbox';
+import type { Role } from '@/types/api';
 
 interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'funcionario';
+  role: Role;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  isAdmin: boolean;
+  logout: () => Promise<void>;
+  isOwner: boolean;
   isAuthenticated: boolean;
 }
+
+const AUTH_TOKEN_KEY = 'auth_token';
+const AUTH_USER_KEY = 'auth_user';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -23,8 +28,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+    const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    const storedUser = localStorage.getItem(AUTH_USER_KEY);
     
     if (storedToken && storedUser) {
       setToken(storedToken);
@@ -34,88 +39,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      // Mock para login de admin e funcionario
-      if (email === 'admin@test.com' && password === 'admin123') {
-        const mockUserData: User = {
-          id: '1',
-          email: 'admin@test.com',
-          name: 'Admin Teste',
-          role: 'admin',
-        };
-        
-        const mockToken = 'mock-jwt-token-admin';
-        
-        setToken(mockToken);
-        setUser(mockUserData);
-        
-        localStorage.setItem('auth_token', mockToken);
-        localStorage.setItem('auth_user', JSON.stringify(mockUserData));
-        return;
-      }
-      
-      if (email === 'funcionario@test.com' && password === 'func123') {
-        const mockUserData: User = {
-          id: '2',
-          email: 'funcionario@test.com',
-          name: 'Funcionário Teste',
-          role: 'funcionario',
-        };
-        
-        const mockToken = 'mock-jwt-token-funcionario';
-        
-        setToken(mockToken);
-        setUser(mockUserData);
-        
-        localStorage.setItem('auth_token', mockToken);
-        localStorage.setItem('auth_user', JSON.stringify(mockUserData));
-        return;
+      const data = await loginRequest({ email, password });
+      const tokenValue = data.token?.value ?? '';
+
+      if (!tokenValue) {
+        throw new Error('Token inválido retornado pela API.');
       }
 
-      // TODO: Substituir pela URL do seu backend AdonisJS
-      const response = await fetch('http://localhost:3333/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Credenciais inválidas');
-      }
-
-      const data = await response.json();
-      
-      // Ajuste conforme a resposta do seu backend
       const userData: User = {
         id: data.user.id,
         email: data.user.email,
-        name: data.user.name,
-        role: data.user.role,
+        name: data.user.nome,
+        role: data.user.tipo,
       };
 
-      setToken(data.token);
+      setToken(tokenValue);
       setUser(userData);
-      
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('auth_user', JSON.stringify(userData));
+
+      localStorage.setItem(AUTH_TOKEN_KEY, tokenValue);
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
     } catch (error) {
-      throw new Error('Erro ao fazer login. Verifique suas credenciais.');
+      throw new Error(
+        error instanceof Error ? error.message : 'Erro ao fazer login. Verifique suas credenciais.'
+      );
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (token) {
+      try {
+        await logoutRequest(token);
+      } catch (error) {
+        console.warn('Erro ao finalizar sessão na API', error);
+      }
+    }
+
     setUser(null);
     setToken(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
   };
 
-  const isAdmin = user?.role === 'admin';
+  const isOwner = user?.role === 'dono';
   const isAuthenticated = !!user && !!token;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAdmin, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isOwner, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

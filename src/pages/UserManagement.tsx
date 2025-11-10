@@ -7,44 +7,48 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus } from 'lucide-react';
+import { createUser } from '@/services/gearbox';
+import type { Role } from '@/types/api';
 
 export default function UserManagement() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'funcionario'>('funcionario');
+  const [role, setRole] = useState<Role>('mecanico');
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!token) {
+      toast({
+        title: 'Sessão expirada',
+        description: 'Faça login novamente para cadastrar usuários.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // TODO: Substituir pela URL do seu backend AdonisJS
-      const response = await fetch('http://localhost:3333/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name, email, password, role }),
+      await createUser(token, {
+        nome: name,
+        email,
+        senha: password,
+        tipo: role,
       });
-
-      if (!response.ok) {
-        throw new Error('Erro ao cadastrar usuário');
-      }
 
       toast({
         title: 'Usuário cadastrado',
-        description: `${name} foi cadastrado com sucesso como ${role}`,
+        description: `${name} foi cadastrado com sucesso como ${role === 'dono' ? 'dono' : 'mecânico'}.`,
       });
 
       setName('');
       setEmail('');
       setPassword('');
-      setRole('funcionario');
+      setRole('mecanico');
     } catch (error) {
       toast({
         title: 'Erro ao cadastrar',
@@ -61,7 +65,7 @@ export default function UserManagement() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Gestão de Usuários</h2>
         <p className="text-muted-foreground">
-          Cadastre administradores e funcionários do sistema
+          Cadastre donos e mecânicos do sistema
         </p>
       </div>
 
@@ -117,13 +121,13 @@ export default function UserManagement() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Tipo de Usuário</Label>
-                <Select value={role} onValueChange={(value: 'admin' | 'funcionario') => setRole(value)} disabled={loading}>
+                <Select value={role} onValueChange={(value: Role) => setRole(value)} disabled={loading}>
                   <SelectTrigger id="role">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="funcionario">Funcionário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="mecanico">Mecânico</SelectItem>
+                    <SelectItem value="dono">Dono</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

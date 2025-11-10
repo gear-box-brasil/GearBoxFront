@@ -29,15 +29,20 @@ import { Button } from "@/components/ui/button";
 import { useFipeBrands, useFipeModels, useFipeYears, getFipeVehicleDetails } from "@/hooks/useFipeApi";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Client } from "@/types/api";
+import { createCar } from "@/services/gearbox";
 
 const vehicleSchema = z.object({
+  clientId: z.string().uuid({ message: "Selecione um cliente" }),
   brandCode: z.string().min(1, "Selecione uma marca"),
   modelCode: z.string().min(1, "Selecione um modelo"),
   yearCode: z.string().min(1, "Selecione um ano"),
-  plate: z.string().min(7, "Placa inválida").max(8, "Placa inválida"),
-  color: z.string().min(1, "Selecione uma cor"),
-  owner: z.string().min(1, "Nome do proprietário é obrigatório"),
-  km: z.string().min(1, "Quilometragem é obrigatória"),
+  plate: z
+    .string()
+    .min(7, "Placa inválida")
+    .max(8, "Placa inválida")
+    .regex(/^[A-Za-z0-9-]+$/, "Placa inválida"),
 });
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>;
@@ -45,17 +50,15 @@ type VehicleFormValues = z.infer<typeof vehicleSchema>;
 interface VehicleFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  clients: Client[];
+  onCreated?: () => void;
 }
 
-const colors = [
-  "Preto", "Branco", "Prata", "Cinza", "Vermelho", 
-  "Azul", "Verde", "Amarelo", "Laranja", "Marrom", "Bege"
-];
-
-export default function VehicleFormDialog({ open, onOpenChange }: VehicleFormDialogProps) {
+export default function VehicleFormDialog({ open, onOpenChange, clients, onCreated }: VehicleFormDialogProps) {
   const [brandCode, setBrandCode] = useState<string | null>(null);
   const [modelCode, setModelCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { token } = useAuth();
 
   const { brands, loading: brandsLoading } = useFipeBrands();
   const { models, loading: modelsLoading } = useFipeModels(brandCode);
@@ -64,17 +67,19 @@ export default function VehicleFormDialog({ open, onOpenChange }: VehicleFormDia
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
+      clientId: "",
       brandCode: "",
       modelCode: "",
       yearCode: "",
       plate: "",
-      color: "",
-      owner: "",
-      km: "",
     },
   });
 
   async function onSubmit(values: VehicleFormValues) {
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
+    }
     setSubmitting(true);
     try {
       const vehicleDetails = await getFipeVehicleDetails(
@@ -83,23 +88,28 @@ export default function VehicleFormDialog({ open, onOpenChange }: VehicleFormDia
         values.yearCode
       );
 
-      if (vehicleDetails) {
-        console.log("Veículo criado:", {
-          ...values,
-          brand: vehicleDetails.Marca,
-          model: vehicleDetails.Modelo,
-          year: vehicleDetails.AnoModelo,
-          fipeValue: vehicleDetails.Valor,
-        });
-        
-        toast.success("Veículo cadastrado com sucesso!");
-        form.reset();
-        setBrandCode(null);
-        setModelCode(null);
-        onOpenChange(false);
+      if (!vehicleDetails) {
+        throw new Error("Não foi possível obter os dados da FIPE.");
       }
+
+      const sanitizedPlate = values.plate.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+      await createCar(token, {
+        clientId: values.clientId,
+        placa: sanitizedPlate,
+        marca: vehicleDetails.Marca,
+        modelo: vehicleDetails.Modelo,
+        ano: Number(vehicleDetails.AnoModelo),
+      });
+
+      toast.success("Veículo cadastrado com sucesso!");
+      form.reset();
+      setBrandCode(null);
+      setModelCode(null);
+      onCreated?.();
+      onOpenChange(false);
     } catch (error) {
-      toast.error("Erro ao cadastrar veículo");
+      toast.error(error instanceof Error ? error.message : "Erro ao cadastrar veículo");
     } finally {
       setSubmitting(false);
     }
@@ -117,6 +127,31 @@ export default function VehicleFormDialog({ open, onOpenChange }: VehicleFormDia
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="clientId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!clients.length}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={clients.length ? "Selecione o cliente" : "Sem clientes cadastrados"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="brandCode"
@@ -231,69 +266,16 @@ export default function VehicleFormDialog({ open, onOpenChange }: VehicleFormDia
 
             <FormField
               control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cor</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a cor" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {colors.map((color) => (
-                        <SelectItem key={color} value={color}>
-                          {color}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="plate"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Placa</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="ABC-1234" 
-                      {...field} 
+                    <Input
+                      placeholder="ABC1234"
+                      {...field}
                       onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="owner"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Proprietário</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do proprietário" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="km"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quilometragem</FormLabel>
-                  <FormControl>
-                    <Input placeholder="50000" type="number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -309,7 +291,7 @@ export default function VehicleFormDialog({ open, onOpenChange }: VehicleFormDia
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting} className="flex-1">
+              <Button type="submit" disabled={submitting || !clients.length} className="flex-1">
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Cadastrar Veículo
               </Button>
