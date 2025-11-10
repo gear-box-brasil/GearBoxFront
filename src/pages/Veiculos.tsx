@@ -57,36 +57,35 @@ export default function Veiculos() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      <div className="px-8 py-6">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">Veículos</h1>
-            <p className="text-muted-foreground">Lista sincronizada com a Gear Box API</p>
-          </div>
-          <Button className="gap-2 bg-gradient-accent hover:opacity-90" onClick={() => setDialogOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Novo Veículo
-          </Button>
+    <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">Veículos</h1>
+          <p className="text-muted-foreground">Lista sincronizada com a Gear Box API</p>
         </div>
+        <Button className="gap-2 bg-gradient-accent hover:opacity-90" onClick={() => setDialogOpen(true)}>
+          <Plus className="w-4 h-4" />
+          Novo Veículo
+        </Button>
+      </div>
 
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Buscar por marca, modelo, placa ou cliente..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
-              className="pl-10"
-            />
-          </div>
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar por marca, modelo, placa ou cliente..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1);
+            }}
+            className="pl-10"
+          />
         </div>
+      </div>
 
-        {isLoading ? (
+      {isLoading ? (
           <div className="flex items-center gap-3 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
             Carregando veículos...
@@ -152,7 +151,6 @@ export default function Veiculos() {
             )}
           </>
         )}
-      </div>
 
       <VehicleFormDialog
         open={dialogOpen}

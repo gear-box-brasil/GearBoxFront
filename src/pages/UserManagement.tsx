@@ -61,7 +61,7 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg space-y-8 p-6 md:p-8">
       <div>
         <h2 className="heading-accent text-3xl font-bold tracking-tight text-foreground">Gestão de Usuários</h2>
         <p className="text-muted-foreground">

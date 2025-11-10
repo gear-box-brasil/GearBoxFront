@@ -144,7 +144,7 @@ export default function Dashboard() {
     servicesQuery.isLoading || clientsQuery.isLoading || carsQuery.isLoading;
 
   return (
-    <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg">
+    <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8">
       <div className="mb-8">
         <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">Dashboard</h1>
         <p className="text-muted-foreground">Indicadores consolidados da Gear Box API</p>
