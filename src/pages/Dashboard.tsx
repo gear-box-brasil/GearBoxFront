@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
   Wrench,
   Users,
@@ -19,12 +20,32 @@ import type { ServiceStatus } from '@/types/api';
 
 const statusConfig: Record<
   ServiceStatus,
-  { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; icon: typeof Clock }
+  { label: string; icon: typeof Clock; className: string; iconClass: string }
 > = {
-  Pendente: { label: 'Pendente', variant: 'secondary', icon: AlertCircle },
-  'Em andamento': { label: 'Em andamento', variant: 'default', icon: Clock },
-  Concluído: { label: 'Concluído', variant: 'outline', icon: CheckCircle2 },
-  Cancelado: { label: 'Cancelado', variant: 'destructive', icon: XCircle },
+  Pendente: {
+    label: 'Pendente',
+    icon: AlertCircle,
+    className: 'bg-[hsl(var(--warning-light))] text-[hsl(var(--warning))] border-transparent',
+    iconClass: 'text-[hsl(var(--warning))]',
+  },
+  'Em andamento': {
+    label: 'Em andamento',
+    icon: Clock,
+    className: 'bg-[rgba(245,163,0,0.15)] text-[hsl(var(--primary))] border-transparent',
+    iconClass: 'text-[hsl(var(--primary))]',
+  },
+  Concluído: {
+    label: 'Concluído',
+    icon: CheckCircle2,
+    className: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))] border-transparent',
+    iconClass: 'text-[hsl(var(--success))]',
+  },
+  Cancelado: {
+    label: 'Cancelado',
+    icon: XCircle,
+    className: 'bg-[rgba(239,83,80,0.15)] text-[hsl(var(--destructive))] border-transparent',
+    iconClass: 'text-[hsl(var(--destructive))]',
+  },
 };
 
 const currencyFormat = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -123,103 +144,108 @@ export default function Dashboard() {
     servicesQuery.isLoading || clientsQuery.isLoading || carsQuery.isLoading;
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      <div className="px-8 py-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">Indicadores consolidados da Gear Box API</p>
-        </div>
+    <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg">
+      <div className="mb-8">
+        <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">Dashboard</h1>
+        <p className="text-muted-foreground">Indicadores consolidados da Gear Box API</p>
+      </div>
 
-        {loadingDashboard ? (
-          <div className="flex items-center gap-3 text-muted-foreground mb-8">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Atualizando indicadores...
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat) => (
-              <Card key={stat.title} className="border-border shadow-md hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-                      <h3 className="text-3xl font-bold text-foreground mb-2">{stat.value}</h3>
-                      <p className="text-xs text-muted-foreground">{stat.change}</p>
+      {loadingDashboard ? (
+        <div className="flex items-center gap-3 text-muted-foreground mb-8">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Atualizando indicadores...
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat) => (
+            <Card key={stat.title} className="border-border shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--primary))] mb-1">
+                      {stat.title}
+                    </p>
+                    <h3 className="text-3xl font-bold text-foreground mb-2">{stat.value}</h3>
+                    <p className="text-xs text-muted-foreground">{stat.change}</p>
+                  </div>
+                  <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Card className="border-border shadow-md">
+        <CardHeader>
+          <CardTitle className="heading-accent text-xl">Ordens de Serviço Recentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {servicesQuery.isLoading ? (
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Buscando ordens...
+            </div>
+          ) : servicesQuery.isError ? (
+            <p className="text-destructive">
+              {servicesQuery.error instanceof Error
+                ? servicesQuery.error.message
+                : 'Erro ao listar ordens'}
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {serviceStats?.data?.map((order) => {
+                const StatusIcon = statusConfig[order.status].icon;
+                return (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-semibold text-foreground">{order.id}</span>
+                        <Badge
+                          className={cn(
+                            'gap-1 text-xs font-semibold border border-transparent',
+                            statusConfig[order.status].className
+                          )}
+                        >
+                          <StatusIcon className={cn('w-3 h-3', statusConfig[order.status].iconClass)} />
+                          {statusConfig[order.status].label}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-foreground font-medium mb-1">
+                        {clientMap.get(order.clientId) ?? 'Cliente não encontrado'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {(() => {
+                          const car = carMap.get(order.carId);
+                          return car ? `${car.marca} ${car.modelo} · ${car.placa}` : 'Veículo não localizado';
+                        })()}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {order.description ?? 'Sem descrição informada'}
+                      </p>
                     </div>
-                    <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                      <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">
+                        {order.createdAt
+                          ? new Date(order.createdAt).toLocaleDateString('pt-BR')
+                          : '—'}
+                      </p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {currencyFormat.format(Number(order.totalValue) || 0)}
+                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        <Card className="border-border shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl">Ordens de Serviço Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {servicesQuery.isLoading ? (
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Buscando ordens...
-              </div>
-            ) : servicesQuery.isError ? (
-              <p className="text-destructive">
-                {servicesQuery.error instanceof Error
-                  ? servicesQuery.error.message
-                  : 'Erro ao listar ordens'}
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {serviceStats?.data?.map((order) => {
-                  const StatusIcon = statusConfig[order.status].icon;
-                  return (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="font-semibold text-foreground">{order.id}</span>
-                          <Badge variant={statusConfig[order.status].variant} className="gap-1">
-                            <StatusIcon className="w-3 h-3" />
-                            {statusConfig[order.status].label}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-foreground font-medium mb-1">
-                          {clientMap.get(order.clientId) ?? 'Cliente não encontrado'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {(() => {
-                            const car = carMap.get(order.carId);
-                            return car ? `${car.marca} ${car.modelo} · ${car.placa}` : 'Veículo não localizado';
-                          })()}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {order.description ?? 'Sem descrição informada'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">
-                          {order.createdAt
-                            ? new Date(order.createdAt).toLocaleDateString('pt-BR')
-                            : '—'}
-                        </p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {currencyFormat.format(Number(order.totalValue) || 0)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

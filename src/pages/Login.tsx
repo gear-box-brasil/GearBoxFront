@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Lock } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -42,12 +42,10 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Lock className="h-6 w-6 text-primary" />
-            </div>
+          <div className="flex justify-center mb-8">
+            <Logo size="xl" />
           </div>
-          <CardTitle className="text-2xl font-bold">Gear Box</CardTitle>
+          <CardTitle className="text-2xl font-bold text-foreground">Bem-vindo ao Gear Box</CardTitle>
           <CardDescription>
             Faça login para gerenciar ordens, clientes e veículos
           </CardDescription>

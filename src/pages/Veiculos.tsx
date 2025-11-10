@@ -61,7 +61,7 @@ export default function Veiculos() {
       <div className="px-8 py-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Veículos</h1>
+            <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">Veículos</h1>
             <p className="text-muted-foreground">Lista sincronizada com a Gear Box API</p>
           </div>
           <Button className="gap-2 bg-gradient-accent hover:opacity-90" onClick={() => setDialogOpen(true)}>

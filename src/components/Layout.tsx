@@ -4,6 +4,7 @@ import { LayoutDashboard, Wrench, Users, Car, UserCog, LogOut, PanelLeftClose, P
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
 
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ['dono', 'mecanico'] },
@@ -32,29 +33,35 @@ export default function Layout() {
     navigate('/login');
   };
   const sidebarWidth = collapsed ? "w-20" : "w-64";
-  const contentPadding = collapsed ? "pl-20" : "pl-64";
+  const sidebarPixelWidth = collapsed ? 80 : 256;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className={cn("fixed inset-y-0 left-0 z-50 bg-card border-r border-border shadow-md transition-all duration-300", sidebarWidth)}>
+      <aside className={cn("sidebar-metal fixed inset-y-0 left-0 z-50 border-r border-border shadow-md transition-all duration-300", sidebarWidth)}>
         <div className="flex flex-col h-full relative">
           {/* Logo */}
-          <div className="h-16 flex items-center px-4 border-b border-border">
-            <div className={cn("flex items-center gap-3", collapsed && "justify-center w-full") }>
-              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <Wrench className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div className={cn("transition-opacity", collapsed && "opacity-0 pointer-events-none") }>
-                <h1 className="text-lg font-bold text-foreground">AutoGest</h1>
-                <p className="text-xs text-muted-foreground">Mecânica Pro</p>
-              </div>
+          <div className="h-16 flex items-center px-4 border-b border-border gap-3">
+            <div className={cn(
+              "flex items-center gap-3 transition-all",
+              collapsed ? "justify-center w-full" : "flex-1"
+            ) }
+            >
+              <Logo size={collapsed ? "sm" : "md"} className="transition-all" />
+              {!collapsed && (
+                <div className="transition-opacity">
+                  <p className="text-xs uppercase tracking-wide text-[hsl(var(--primary))] leading-tight">
+                    Painel
+                  </p>
+                  <h1 className="text-lg font-bold text-foreground leading-tight">Gear Box</h1>
+                </div>
+              )}
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setCollapsed((prev) => !prev)}
-              className="absolute -right-3 top-4 h-7 w-7 rounded-full border border-border bg-card shadow-sm"
+              className="h-8 w-8 rounded-full border border-border bg-card shadow-sm text-muted-foreground hover:text-foreground ml-auto"
               aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
             >
               {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -70,18 +77,27 @@ export default function Layout() {
                 end={item.href === "/"}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center rounded-lg transition-all",
+                    "flex items-center rounded-lg transition-all font-medium",
                     collapsed ? "justify-center px-2 py-3" : "justify-start gap-3 px-4 py-3",
-                    "text-sm font-medium",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-[rgba(245,163,0,0.15)] text-[hsl(var(--primary))] shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
+                      : "text-[hsl(var(--muted-foreground))] hover:bg-[#21272A] hover:text-[hsl(var(--foreground))]"
                   )
                 }
               >
-                <item.icon className="w-5 h-5" />
-                {!collapsed && (
-                  <span className="ml-3">{item.name}</span>
+                {({ isActive }) => (
+                  <>
+                    <item.icon
+                      className={cn(
+                        "w-5 h-5 transition-colors",
+                        collapsed && "mx-auto",
+                        isActive
+                          ? "text-[hsl(var(--primary))]"
+                          : "text-[hsl(var(--muted-foreground))]"
+                      )}
+                    />
+                    {!collapsed && <span className="ml-3">{item.name}</span>}
+                  </>
                 )}
               </NavLink>
             ))}
@@ -118,8 +134,11 @@ export default function Layout() {
       </aside>
 
       {/* Main Content */}
-      <div className={cn("transition-[padding] duration-300", contentPadding)}>
-        <main className="min-h-screen">
+      <div
+        className="transition-[padding] duration-300"
+        style={{ paddingLeft: `calc(${sidebarPixelWidth}px + 24px)` }}
+      >
+        <main className="min-h-screen px-6 md:px-10 py-6">
           <Outlet />
         </main>
       </div>

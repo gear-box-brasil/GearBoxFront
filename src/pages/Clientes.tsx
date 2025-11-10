@@ -38,7 +38,7 @@ export default function Clientes() {
       <div className="px-8 py-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Clientes</h1>
+            <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">Clientes</h1>
             <p className="text-muted-foreground">Dados vindos diretamente da Gear Box API</p>
           </div>
           <Button className="gap-2 bg-gradient-accent hover:opacity-90" disabled>

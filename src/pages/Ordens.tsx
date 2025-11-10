@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Plus, Search, Clock, CheckCircle2, AlertCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -11,12 +12,32 @@ import type { ServiceStatus } from '@/types/api';
 
 const statusConfig: Record<
   ServiceStatus,
-  { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; icon: typeof Clock }
+  { label: string; icon: typeof Clock; className: string; iconClass: string }
 > = {
-  Pendente: { label: 'Pendente', variant: 'secondary', icon: AlertCircle },
-  'Em andamento': { label: 'Em andamento', variant: 'default', icon: Clock },
-  Concluído: { label: 'Concluído', variant: 'outline', icon: CheckCircle2 },
-  Cancelado: { label: 'Cancelado', variant: 'destructive', icon: XCircle },
+  Pendente: {
+    label: 'Pendente',
+    icon: AlertCircle,
+    className: 'bg-[hsl(var(--warning-light))] text-[hsl(var(--warning))] border-transparent',
+    iconClass: 'text-[hsl(var(--warning))]',
+  },
+  'Em andamento': {
+    label: 'Em andamento',
+    icon: Clock,
+    className: 'bg-[rgba(245,163,0,0.15)] text-[hsl(var(--primary))] border-transparent',
+    iconClass: 'text-[hsl(var(--primary))]',
+  },
+  Concluído: {
+    label: 'Concluído',
+    icon: CheckCircle2,
+    className: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))] border-transparent',
+    iconClass: 'text-[hsl(var(--success))]',
+  },
+  Cancelado: {
+    label: 'Cancelado',
+    icon: XCircle,
+    className: 'bg-[rgba(239,83,80,0.15)] text-[hsl(var(--destructive))] border-transparent',
+    iconClass: 'text-[hsl(var(--destructive))]',
+  },
 };
 
 const currencyFormat = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -74,7 +95,7 @@ export default function Ordens() {
       <div className="px-8 py-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Ordens de Serviço</h1>
+            <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">Ordens de Serviço</h1>
             <p className="text-muted-foreground">Resultados carregados da Gear Box API</p>
           </div>
           <Button className="gap-2 bg-gradient-accent hover:opacity-90" disabled>
@@ -125,8 +146,13 @@ export default function Ordens() {
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-lg font-bold text-foreground mb-1">{service.id}</h3>
-                          <Badge variant={config.variant} className="gap-1">
-                            <StatusIcon className="w-3 h-3" />
+                          <Badge
+                            className={cn(
+                              'gap-1 text-xs font-semibold border border-transparent',
+                              config.className
+                            )}
+                          >
+                            <StatusIcon className={cn('w-3 h-3', config.iconClass)} />
                             {config.label}
                           </Badge>
                         </div>
