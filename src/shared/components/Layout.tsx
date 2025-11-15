@@ -5,6 +5,7 @@ import {
   Wrench,
   FileText,
   Users,
+  Shield,
   Car,
   UserCog,
   LogOut,
@@ -46,7 +47,12 @@ const navigationItems = [
     icon: Car,
     roles: ["dono", "mecanico"],
   },
-  { name: "Usuários", href: "/usuarios", icon: UserCog, roles: ["dono"] },
+  {
+    name: "Painel do Dono",
+    href: "/owner-dashboard",
+    icon: Shield,
+    roles: ["dono"],
+  },
 ];
 
 const roleLabel: Record<"dono" | "mecanico", string> = {

@@ -12,9 +12,9 @@ import OrdersPage from "@/features/orders/pages/OrdersPage";
 import BudgetsPage from "@/features/budgets/pages/BudgetsPage";
 import ClientsPage from "@/features/clients/pages/ClientsPage";
 import VehiclesPage from "@/features/vehicles/pages/VehiclesPage";
-import UserManagementPage from "@/features/users/pages/UserManagementPage";
 import LoginPage from "@/features/auth/pages/LoginPage";
 import NotFoundPage from "@/features/misc/pages/NotFoundPage";
+import DashboardOwner from "@/pages/owner-dashboard/DashboardOwner";
 
 const queryClient = new QueryClient();
 
@@ -42,10 +42,10 @@ const App = () => (
               <Route path="clientes" element={<ClientsPage />} />
               <Route path="veiculos" element={<VehiclesPage />} />
               <Route
-                path="usuarios"
+                path="owner-dashboard"
                 element={
                   <ProtectedRoute requireOwner>
-                    <UserManagementPage />
+                    <DashboardOwner />
                   </ProtectedRoute>
                 }
               />

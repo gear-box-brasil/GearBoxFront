@@ -5,6 +5,7 @@ export interface ApiUser {
   nome: string;
   email: string;
   tipo: Role;
+  ativo: boolean;
   createdAt?: string;
   updatedAt?: string | null;
 }
@@ -72,7 +73,7 @@ export interface Budget {
   id: string;
   clientId: string;
   carId: string;
-  userId: string;
+  userId: string | null;
   description: string;
   amount: string;
   status: BudgetStatus;

@@ -34,9 +34,31 @@ export function logout(token: string) {
 
 export function createUser(
   token: string,
-  payload: { nome: string; email: string; senha: string; tipo: Role }
+  payload: { nome: string; email: string; senha: string; tipo: Role; ativo?: boolean }
 ) {
   return apiRequest<ApiUser>('/users', { method: 'POST', body: payload, token });
+}
+
+export function listUsers(token: string, params?: PaginationParams) {
+  return apiRequest<PaginatedResponse<ApiUser>>(`/users${buildQueryString(params)}`, {
+    token,
+  });
+}
+
+export function updateUser(
+  token: string,
+  id: string,
+  payload: Partial<{ nome: string; email: string; senha: string; tipo: Role; ativo: boolean }>
+) {
+  return apiRequest<ApiUser>(`/users/${id}`, { method: 'PUT', body: payload, token });
+}
+
+export function deleteUser(
+  token: string,
+  id: string,
+  payload?: { transferToUserId?: string | null }
+) {
+  return apiRequest<void>(`/users/${id}`, { method: 'DELETE', token, body: payload });
 }
 
 export function listClients(token: string, params?: PaginationParams) {
