@@ -1,19 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts'
+import { ChartPlaceholder } from './ChartPlaceholder'
 
 export function MechanicDetailChart({ mechanic, data = [] }) {
   return (
-    <Card className="border-border shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-lg">
+    <Card className="border-border shadow-sm bg-card/80">
+      <CardHeader className="space-y-1.5 pb-0">
+        <CardTitle className="text-base font-semibold">
           Evolução {mechanic ? `– ${mechanic.nome}` : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[360px]">
+      <CardContent className="h-[340px] pt-4">
         {!mechanic ? (
-          <p className="text-sm text-muted-foreground">Selecione um mecânico para ver detalhes.</p>
+          <ChartPlaceholder
+            title="Selecione um mecânico"
+            description="Escolha um profissional na tabela abaixo para acompanhar o histórico."
+          />
         ) : data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Este mecânico ainda não possui histórico.</p>
+          <ChartPlaceholder
+            title="Sem histórico por aqui"
+            description="Quando este mecânico gerar budgets ou serviços, a evolução aparecerá."
+          />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 10, right: 24, left: 0, bottom: 10 }}>

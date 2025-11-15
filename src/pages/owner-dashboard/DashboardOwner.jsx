@@ -249,18 +249,17 @@ export default function DashboardOwner() {
   const hasError = usersQuery.isError || budgetsQuery.isError || servicesQuery.isError
 
   return (
-    <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8 space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <PageHeader
-          eyebrow="Painel Executivo"
-          title="Dashboard do Dono"
-          subtitle="Visão consolidada de budgets, serviços e performance dos mecânicos."
-        />
-        <CreateUserModal onSubmit={handleCreateUser} />
-      </div>
+    <div className="page-container space-y-6 rounded-2xl border border-border bg-gradient-hero p-6 shadow-lg md:p-7">
+      <PageHeader
+        eyebrow="Painel Executivo"
+        title="Dashboard do Dono"
+        subtitle="Visão consolidada de budgets, serviços e performance dos mecânicos."
+        actions={<CreateUserModal onSubmit={handleCreateUser} />}
+        className="gap-3"
+      />
 
       {isLoading ? (
-        <Card className="p-10 flex items-center justify-center bg-card/70">
+        <Card className="flex items-center justify-center bg-card/80 p-8">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         </Card>
       ) : hasError ? (
@@ -269,7 +268,7 @@ export default function DashboardOwner() {
         <>
           <KpiCards metrics={metrics} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3">
             <MechanicsComparisonChart data={comparisonData} />
             <BudgetStatusChart data={statusData} />
             <MechanicDetailChart mechanic={selectedMechanic} data={detailData} />
