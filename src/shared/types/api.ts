@@ -41,6 +41,10 @@ export interface Client {
   email?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  createdByUser?: ApiUser | null;
+  updatedByUser?: ApiUser | null;
 }
 
 export interface Car {

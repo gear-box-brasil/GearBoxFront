@@ -322,11 +322,7 @@ export default function DashboardOwner() {
                   }}
                   onSubmit={(payload) => handleUpdateUser(currentUser.id, payload)}
                   renderTrigger={({ open }) => (
-                    <Button
-                      size="sm"
-                      className="bg-gradient-accent px-4 text-sm font-semibold text-white shadow-sm hover:opacity-90"
-                      onClick={open}
-                    >
+                    <Button className="bg-gradient-accent hover:opacity-90" onClick={open}>
                       Editar
                     </Button>
                   )}

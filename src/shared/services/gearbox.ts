@@ -6,6 +6,7 @@ import type {
   Car,
   Service,
   Budget,
+  BudgetStatus,
   Role,
   ApiUser,
 } from '@/types/api';
@@ -67,6 +68,25 @@ export function listClients(token: string, params?: PaginationParams) {
   });
 }
 
+export function createClient(
+  token: string,
+  payload: { nome: string; telefone: string; email?: string | null }
+) {
+  return apiRequest<Client>('/clients', { method: 'POST', body: payload, token });
+}
+
+export function updateClient(
+  token: string,
+  id: string,
+  payload: Partial<{ nome: string; telefone: string; email?: string | null }>
+) {
+  return apiRequest<Client>(`/clients/${id}`, { method: 'PUT', body: payload, token });
+}
+
+export function deleteClient(token: string, id: string) {
+  return apiRequest<void>(`/clients/${id}`, { method: 'DELETE', token });
+}
+
 export function listCars(token: string, params?: PaginationParams) {
   return apiRequest<PaginatedResponse<Car>>(`/cars${buildQueryString(params)}`, {
     token,
@@ -79,8 +99,45 @@ export function listServices(token: string, params?: PaginationParams) {
   });
 }
 
+export function updateService(
+  token: string,
+  id: string,
+  payload: Partial<{ status: ServiceStatus }>
+) {
+  return apiRequest<Service>(`/services/${id}`, { method: 'PUT', body: payload, token });
+}
+
 export function listBudgets(token: string, params?: PaginationParams) {
   return apiRequest<PaginatedResponse<Budget>>(`/budgets${buildQueryString(params)}`, {
+    token,
+  });
+}
+
+export function createBudget(
+  token: string,
+  payload: { clientId: string; carId: string; description: string; amount: number; status?: BudgetStatus }
+) {
+  return apiRequest<Budget>('/budgets', { method: 'POST', body: payload, token });
+}
+
+export function updateBudget(
+  token: string,
+  id: string,
+  payload: Partial<{ clientId: string; carId: string; description: string; amount: number; status: BudgetStatus }>
+) {
+  return apiRequest<Budget>(`/budgets/${id}`, { method: 'PUT', body: payload, token });
+}
+
+export function acceptBudget(token: string, id: string) {
+  return apiRequest<{ budget: Budget; service: Service }>(`/budgets/${id}/accept`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export function rejectBudget(token: string, id: string) {
+  return apiRequest<Budget>(`/budgets/${id}/reject`, {
+    method: 'POST',
     token,
   });
 }

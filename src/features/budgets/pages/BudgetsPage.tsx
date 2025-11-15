@@ -1,93 +1,201 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
-import { listBudgets, listClients, listCars } from '@/services/gearbox';
-import type { BudgetStatus } from '@/types/api';
-import { cn } from '@/lib/utils';
-import { Loader2, Clock, CheckCircle2, ThumbsDown, XCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchInput } from '@/components/SearchInput';
 import { EmptyState } from '@/components/EmptyState';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
+import {
+  listBudgets,
+  listClients,
+  listCars,
+  listUsers,
+  createBudget,
+  updateBudget,
+  acceptBudget,
+  rejectBudget,
+} from '@/services/gearbox';
+import type { ApiUser, Budget, BudgetStatus, Car, Client } from '@/types/api';
+import { BudgetFormDialog } from '@/features/budgets/components/BudgetFormDialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const statusConfig: Record<
-  BudgetStatus,
-  { label: string; description: string; icon: typeof Clock; className: string; iconClass: string }
-> = {
+const EMPTY_CLIENTS: Client[] = [];
+const EMPTY_CARS: Car[] = [];
+const EMPTY_USERS: ApiUser[] = [];
+const EMPTY_BUDGETS: Budget[] = [];
+
+const statusConfig: Record<BudgetStatus, { label: string; description: string; badgeClass: string }> = {
   aberto: {
     label: 'Aberto',
     description: 'Aguardando aprovação',
-    icon: Clock,
-    className: 'bg-[rgba(245,163,0,0.15)] text-[hsl(var(--primary))] border-transparent',
-    iconClass: 'text-[hsl(var(--primary))]',
+    badgeClass: 'bg-sky-500/10 text-sky-200 border border-sky-400/40',
   },
   aceito: {
     label: 'Aceito',
     description: 'Convertido em serviço',
-    icon: CheckCircle2,
-    className: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))]',
-    iconClass: 'text-[hsl(var(--success))]',
+    badgeClass: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))] border border-emerald-400/30',
   },
   recusado: {
-    label: 'Recusado',
-    description: 'Cliente recusou o orçamento',
-    icon: ThumbsDown,
-    className: 'bg-[rgba(239,83,80,0.15)] text-[hsl(var(--destructive))]',
-    iconClass: 'text-[hsl(var(--destructive))]',
+    label: 'Negado',
+    description: 'Recusado pelo cliente',
+    badgeClass: 'bg-rose-500/10 text-rose-200 border border-rose-400/40',
   },
   cancelado: {
     label: 'Cancelado',
-    description: 'Removido ou expirado',
-    icon: XCircle,
-    className: 'bg-[rgba(229,231,235,0.15)] text-muted-foreground',
-    iconClass: 'text-muted-foreground',
+    description: 'Cancelado ou expirado',
+    badgeClass: 'bg-slate-600/20 text-slate-200 border border-slate-500/30',
   },
 };
 
-const currencyFormat = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
-});
+const currencyFormat = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const dateFormat = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+const BUDGET_STATUS_OPTIONS: (BudgetStatus | 'todos')[] = ['todos', 'aberto', 'aceito', 'recusado', 'cancelado'];
 
-export default function Orcamentos() {
+export default function BudgetsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const { token } = useAuth();
+  const [statusFilter, setStatusFilter] = useState<BudgetStatus | 'todos'>('todos');
+  const [createdFrom, setCreatedFrom] = useState('');
+  const [createdTo, setCreatedTo] = useState('');
+  const { token, user, isOwner } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const budgetsQuery = useQuery({
     queryKey: ['budgets', token, page],
     queryFn: () => listBudgets(token!, { page, perPage: 10 }),
     enabled: Boolean(token),
+    keepPreviousData: true,
   });
 
   const clientsQuery = useQuery({
-    queryKey: ['clients', token, 'budgets-map'],
+    queryKey: ['clients', token, 'budget-map'],
     queryFn: () => listClients(token!, { page: 1, perPage: 100 }),
     enabled: Boolean(token),
   });
 
   const carsQuery = useQuery({
-    queryKey: ['cars', token, 'budgets-map'],
+    queryKey: ['cars', token, 'budget-map'],
     queryFn: () => listCars(token!, { page: 1, perPage: 100 }),
     enabled: Boolean(token),
   });
 
+  const mechanicsQuery = useQuery({
+    queryKey: ['users', token, 'budget-mechanics'],
+    queryFn: () => listUsers(token!, { page: 1, perPage: 100 }),
+    enabled: Boolean(token) && isOwner,
+  });
+
+  const createBudgetMutation = useMutation({
+    mutationFn: (payload: { clientId: string; carId: string; description: string; amount: number }) =>
+      createBudget(token!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    },
+  });
+
+  const editBudgetMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { clientId: string; carId: string; description: string; amount: number } }) =>
+      updateBudget(token!, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    },
+  });
+
+  const approveBudgetMutation = useMutation({
+    mutationFn: (id: string) => acceptBudget(token!, id),
+    onSuccess: ({ service }) => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      toast({
+        title: 'Orçamento aprovado',
+        description: `Serviço ${service.id} criado automaticamente.`,
+        action: (
+          <ToastAction altText="Ver serviço" onClick={() => navigate('/ordens')}>
+            Ver serviço
+          </ToastAction>
+        ),
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: 'Não foi possível aprovar o orçamento',
+        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const denyBudgetMutation = useMutation({
+    mutationFn: (id: string) => rejectBudget(token!, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      toast({
+        title: 'Orçamento negado',
+        description: 'O status foi atualizado para negado.',
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: 'Não foi possível negar o orçamento',
+        description: error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const clients = clientsQuery.data?.data;
+  const cars = carsQuery.data?.data;
+  const mechanics = mechanicsQuery.data?.data;
+  const budgets = budgetsQuery.data?.data;
+
+  const safeClients = clients ?? EMPTY_CLIENTS;
+  const safeCars = cars ?? EMPTY_CARS;
+  const safeMechanics = mechanics ?? EMPTY_USERS;
+
   const clientMap = useMemo(() => {
-    const entries = clientsQuery.data?.data?.map((client) => [client.id, client.nome]) ?? [];
+    const entries = safeClients.map((client) => [client.id, client.nome] as const);
     return new Map(entries);
-  }, [clientsQuery.data]);
+  }, [safeClients]);
 
   const carMap = useMemo(() => {
-    const entries = carsQuery.data?.data?.map((car) => [car.id, car]) ?? [];
+    const entries = safeCars.map((car) => [car.id, car] as const);
     return new Map(entries);
-  }, [carsQuery.data]);
+  }, [safeCars]);
 
-  const budgets = budgetsQuery.data?.data ?? [];
+  const mechanicMap = useMemo(() => {
+    const entries = safeMechanics.map((mechanic) => [mechanic.id, mechanic.nome] as const);
+    const map = new Map(entries);
+    if (user) {
+      map.set(user.id, user.name);
+    }
+    return map;
+  }, [safeMechanics, user]);
+
   const filteredBudgets = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return budgets.filter((budget) => {
+    const budgetList = budgets ?? EMPTY_BUDGETS;
+    const term = searchTerm.trim().toLowerCase();
+    const fromDate = createdFrom ? new Date(createdFrom) : null;
+    const toDate = createdTo ? new Date(createdTo) : null;
+
+    const filtered = budgetList.filter((budget) => {
+      if (statusFilter !== 'todos' && budget.status !== statusFilter) return false;
+      if (fromDate || toDate) {
+        const createdAt = budget.createdAt ? new Date(budget.createdAt) : null;
+        if (!createdAt) return false;
+        if (fromDate && createdAt < fromDate) return false;
+        if (toDate && createdAt > toDate) return false;
+      }
+      if (!term) return true;
       const clientName = clientMap.get(budget.clientId)?.toLowerCase() ?? '';
       const car = carMap.get(budget.carId);
       const vehicleText = car ? `${car.marca} ${car.modelo} ${car.placa}`.toLowerCase() : '';
@@ -99,129 +207,294 @@ export default function Orcamentos() {
         description.includes(term)
       );
     });
-  }, [budgets, searchTerm, clientMap, carMap]);
+
+    return filtered
+      .slice()
+      .sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
+  }, [budgets, searchTerm, clientMap, carMap, statusFilter, createdFrom, createdTo]);
+
+  const createDisabled =
+    createBudgetMutation.isPending ||
+    clientsQuery.isLoading ||
+    carsQuery.isLoading ||
+    clientsQuery.isError ||
+    carsQuery.isError ||
+    safeClients.length === 0 ||
+    safeCars.length === 0;
+
+  const handleCreateBudget = async (values: {
+    clientId: string;
+    carId: string;
+    description: string;
+    amount: number;
+  }) => {
+    await createBudgetMutation.mutateAsync(values);
+  };
+
+  const handleEditBudget = async (id: string, values: {
+    clientId: string;
+    carId: string;
+    description: string;
+    amount: number;
+  }) => {
+    await editBudgetMutation.mutateAsync({ id, data: values });
+  };
+
+  const handleApproveBudget = async (id: string) => {
+    await approveBudgetMutation.mutateAsync(id);
+  };
+
+  const handleDenyBudget = async (id: string) => {
+    await denyBudgetMutation.mutateAsync(id);
+  };
+
+  const renderBudgetCards = () => {
+    if (budgetsQuery.isLoading) {
+      return (
+        <div className="flex items-center gap-3 text-muted-foreground py-10">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Carregando orçamentos...
+        </div>
+      );
+    }
+
+    if (budgetsQuery.isError) {
+      return (
+        <p className="text-destructive py-6">
+          {budgetsQuery.error instanceof Error
+            ? budgetsQuery.error.message
+            : 'Erro ao buscar orçamentos'}
+        </p>
+      );
+    }
+
+    if (filteredBudgets.length === 0) {
+      return (
+        <EmptyState
+          title="Nenhum orçamento encontrado"
+          description="Cadastre um orçamento ou ajuste os filtros para visualizar registros."
+        />
+      );
+    }
+
+    return (
+      <>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {filteredBudgets.map((budget) => {
+            const car = carMap.get(budget.carId);
+            const clientName = clientMap.get(budget.clientId) ?? 'Cliente não localizado';
+            const mechanicName = budget.userId
+              ? mechanicMap.get(budget.userId) ?? budget.userId.slice(0, 8)
+              : '—';
+            const config = statusConfig[budget.status];
+            const createdAt = budget.createdAt ? dateFormat.format(new Date(budget.createdAt)) : '—';
+            const formattedAmount = currencyFormat.format(Number(budget.amount) || 0);
+            const approving = approveBudgetMutation.variables === budget.id && approveBudgetMutation.isPending;
+            const denying = denyBudgetMutation.variables === budget.id && denyBudgetMutation.isPending;
+
+            return (
+              <Card
+                key={budget.id}
+                className="border-border bg-card/80 shadow-md transition hover:shadow-lg"
+              >
+                <CardContent className="space-y-5 p-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Orçamento</p>
+                      <p className="text-lg font-semibold text-foreground">{budget.id}</p>
+                      <Badge className={cn('mt-2 px-3 py-1 text-xs font-semibold', config.badgeClass)}>
+                        {config.label}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">{config.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Valor estimado</p>
+                      <p className="text-2xl font-semibold text-foreground">{formattedAmount}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{createdAt}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 text-sm md:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Cliente</p>
+                      <p className="font-medium text-foreground">{clientName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Mecânico responsável</p>
+                      <p className="font-medium text-foreground">{mechanicName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Veículo</p>
+                      <p className="font-medium text-foreground">
+                        {car ? `${car.marca} ${car.modelo}` : 'Não localizado'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{car?.placa ?? '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Criado em</p>
+                      <p className="font-medium text-foreground">{createdAt}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted-foreground">Descrição</p>
+                    <p className="text-sm text-foreground">{budget.description}</p>
+                  </div>
+
+                  <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      status: <span className="font-medium text-foreground">{config.label}</span>
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <BudgetFormDialog
+                        mode="edit"
+                        clients={safeClients}
+                        cars={safeCars}
+                        initialValues={{
+                          clientId: budget.clientId,
+                          carId: budget.carId,
+                          description: budget.description,
+                          amount: Number(budget.amount),
+                        }}
+                        onSubmit={(values) => handleEditBudget(budget.id, values)}
+                        renderTrigger={({ open, disabled }) => (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-400/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                            onClick={open}
+                            disabled={disabled}
+                          >
+                            Editar
+                          </Button>
+                        )}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                        disabled={budget.status !== 'aberto' || approving}
+                        onClick={() => handleApproveBudget(budget.id)}
+                      >
+                        {approving ? 'Aprovando...' : 'Aprovar'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                        disabled={budget.status !== 'aberto' || denying}
+                        onClick={() => handleDenyBudget(budget.id)}
+                      >
+                        {denying ? 'Negando...' : 'Negar'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {budgetsQuery.data?.meta && (
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mt-6">
+            <p className="text-sm text-muted-foreground">
+              Página {budgetsQuery.data.meta.currentPage} de {budgetsQuery.data.meta.lastPage}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1 || budgetsQuery.isFetching}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={
+                  page === budgetsQuery.data.meta.lastPage || budgetsQuery.isFetching
+                }
+                onClick={() => setPage((prev) => prev + 1)}
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8">
       <PageHeader
         eyebrow="Financeiro"
         title="Orçamentos"
-        subtitle="Listagem em tempo real da Gear Box API"
+        subtitle="Crie, aprove e acompanhe budgets sem sair do dashboard."
         actions={
-          <SearchInput
-            placeholder="Buscar por cliente, veículo ou descrição..."
-            value={searchTerm}
-            onChange={(event) => {
-              setSearchTerm(event.target.value);
-              setPage(1);
-            }}
+          <BudgetFormDialog
+            clients={safeClients}
+            cars={safeCars}
+            onSubmit={handleCreateBudget}
+            renderTrigger={({ open, disabled }) => (
+              <Button
+                className="bg-gradient-accent hover:opacity-90"
+                onClick={open}
+                disabled={createDisabled || disabled}
+              >
+                Registrar novo orçamento
+              </Button>
+            )}
           />
         }
       />
 
-      {budgetsQuery.isLoading ? (
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Carregando orçamentos...
-        </div>
-      ) : budgetsQuery.isError ? (
-        <p className="text-destructive">
-          {budgetsQuery.error instanceof Error
-            ? budgetsQuery.error.message
-            : 'Erro ao buscar orçamentos'}
+      <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <SearchInput
+          placeholder="Buscar por número, cliente ou veículo..."
+          value={searchTerm}
+          onChange={(event) => {
+            setSearchTerm(event.target.value);
+            setPage(1);
+          }}
+          wrapperClassName="max-w-xl"
+        />
+        <p className="text-xs text-muted-foreground">
+          Status em tempo real da API Gear Box
         </p>
-      ) : (
-        <>
-          {filteredBudgets.length === 0 ? (
-            <EmptyState
-              title="Nenhum orçamento encontrado"
-              description="Ajuste os filtros ou aguarde novos registros no backend."
-            />
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredBudgets.map((budget) => {
-                const config = statusConfig[budget.status];
-                const StatusIcon = config.icon;
-                const clientName = clientMap.get(budget.clientId) ?? 'Cliente desconhecido';
-                const car = carMap.get(budget.carId);
-                const total = currencyFormat.format(Number(budget.amount) || 0);
-                return (
-                  <Card key={budget.id} className="border-border shadow-md hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-lg font-bold text-foreground mb-1">{budget.id}</h3>
-                          <Badge
-                            className={cn(
-                              'gap-1 text-xs font-semibold border border-transparent items-center',
-                              config.className
-                            )}
-                          >
-                            <StatusIcon className={cn('w-3 h-3', config.iconClass)} />
-                            {config.label}
-                          </Badge>
-                          <p className="text-[11px] text-muted-foreground mt-1">{config.description}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-primary">{total}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {budget.createdAt
-                              ? new Date(budget.createdAt).toLocaleDateString('pt-BR')
-                              : '—'}
-                          </p>
-                        </div>
-                      </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <div className="space-y-1 text-xs">
+          <p className="text-muted-foreground uppercase tracking-wide">Status</p>
+          <Select value={statusFilter} onValueChange={(value: typeof statusFilter) => setStatusFilter(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              {BUDGET_STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === 'todos' ? 'Todos' : statusConfig[option as BudgetStatus].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1 text-xs">
+          <p className="text-muted-foreground uppercase tracking-wide">Cadastro a partir</p>
+          <Input type="date" value={createdFrom} onChange={(event) => setCreatedFrom(event.target.value)} />
+        </div>
+        <div className="space-y-1 text-xs">
+          <p className="text-muted-foreground uppercase tracking-wide">Cadastro até</p>
+          <Input type="date" value={createdTo} onChange={(event) => setCreatedTo(event.target.value)} />
+        </div>
+      </div>
 
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Cliente</p>
-                          <p className="text-sm font-medium text-foreground">{clientName}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Veículo</p>
-                          <p className="text-sm font-medium text-foreground">
-                            {car ? `${car.marca} ${car.modelo} · ${car.placa}` : 'Não localizado'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Descrição</p>
-                          <p className="text-sm text-foreground">{budget.description}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-
-          {budgetsQuery.data?.meta && (
-            <div className="flex items-center justify-between mt-6">
-              <p className="text-sm text-muted-foreground">
-                Página {budgetsQuery.data.meta.currentPage} de {budgetsQuery.data.meta.lastPage}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1 || budgetsQuery.isFetching}
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === budgetsQuery.data.meta.lastPage || budgetsQuery.isFetching}
-                  onClick={() => setPage((prev) => prev + 1)}
-                >
-                  Próxima
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      <div className="mt-6">{renderBudgetCards()}</div>
     </div>
   );
 }

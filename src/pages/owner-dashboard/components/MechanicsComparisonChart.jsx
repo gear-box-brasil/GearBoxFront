@@ -1,121 +1,196 @@
-import { useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChartPlaceholder } from './ChartPlaceholder'
+import { useMemo } from "react";
+import ReactECharts from "echarts-for-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartPlaceholder } from "./ChartPlaceholder";
 
-const LEGEND = ['Budgets', 'Concluídos', 'Aceitos', 'Cancelados']
 const COLORS = {
-  text: '#f8fafc',
-  grid: 'rgba(255,255,255,0.08)',
-  axis: 'rgba(255,255,255,0.25)',
-  budgets: '#FFC107',
-  concluded: '#38BDF8',
-  accepted: '#F472B6',
-  cancelled: '#F43F5E',
-}
+  text: "#f8fafc",
+  grid: "rgba(255,255,255,0.08)",
+  axis: "rgba(255,255,255,0.25)",
+  budgets: "#FFC107",
+  concluded: "#38BDF8",
+  accepted: "#F472B6",
+  cancelled: "#F43F5E",
+};
+
+const SERIES_COLORS = [
+  COLORS.budgets,
+  COLORS.concluded,
+  COLORS.accepted,
+  COLORS.cancelled,
+  "#22d3ee",
+  "#c084fc",
+  "#34d399",
+  "#818cf8",
+];
+
+const METRICS = [
+  { label: "Budgets", color: COLORS.budgets, suffix: "", richKey: "budgets" },
+  {
+    label: "Serviços concluídos",
+    color: COLORS.concluded,
+    suffix: "",
+    richKey: "services",
+  },
+  {
+    label: "Taxa de aceitação (%)",
+    color: COLORS.accepted,
+    suffix: "%",
+    richKey: "accepted",
+  },
+  {
+    label: "Taxa de cancelamento (%)",
+    color: COLORS.cancelled,
+    suffix: "%",
+    richKey: "cancelled",
+  },
+];
+
+const RADAR_NAME_RICH = METRICS.reduce((acc, metric) => {
+  acc[metric.richKey] = {
+    color: metric.color,
+    fontSize: 12,
+  };
+  return acc;
+}, {});
+
+const hexToRgba = (hex, alpha = 1) => {
+  const sanitized = hex.replace("#", "");
+  const normalized =
+    sanitized.length === 3
+      ? sanitized
+          .split("")
+          .map((char) => `${char}${char}`)
+          .join("")
+      : sanitized;
+  const numeric = parseInt(normalized, 16);
+  const r = (numeric >> 16) & 255;
+  const g = (numeric >> 8) & 255;
+  const b = numeric & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 export function MechanicsComparisonChart({ data = [], loading = false }) {
   const chartOption = useMemo(() => {
-    const categories = data.map((item) => item.name)
-    const budgets = data.map((item) => item.budgets ?? 0)
-    const concluded = data.map((item) => item.services ?? 0)
-    const acceptance = data.map((item) => item.acceptRate ?? 0)
-    const cancellation = data.map((item) => item.cancelRate ?? 0)
+    const mechanicNames = data.map((item) => item.name);
+    const budgets = data.map((item) => item.budgets ?? 0);
+    const concluded = data.map((item) => item.services ?? 0);
+
+    const budgetsMax = Math.max(1, ...budgets);
+    const concludedMax = Math.max(1, ...concluded);
+
+    const indicators = [
+      { name: METRICS[0].label, max: budgetsMax, min: 0, color: METRICS[0].color },
+      {
+        name: METRICS[1].label,
+        max: concludedMax,
+        min: 0,
+        color: METRICS[1].color,
+      },
+      { name: METRICS[2].label, max: 100, min: 0, color: METRICS[2].color },
+      { name: METRICS[3].label, max: 100, min: 0, color: METRICS[3].color },
+    ];
 
     const formatTooltip = (items) => {
-      const entries = Array.isArray(items) ? items : [items]
-      const header = entries[0]?.axisValueLabel ?? entries[0]?.name ?? ''
-      const rows = entries
-        .map((item) => {
-          const isRate = item.seriesName === 'Aceitos' || item.seriesName === 'Cancelados'
-          const value = isRate ? `${item.value ?? 0}%` : item.value ?? 0
-          return `${item.marker} ${item.seriesName}: ${value}`
+      const params = Array.isArray(items) ? items : [items];
+      return params
+        .map((param) => {
+          const values = param?.data?.value ?? [];
+          const metricRows = values
+            .map((value, index) => {
+              const metric = METRICS[index];
+              const numericValue = value ?? 0;
+              const formattedValue =
+                metric.suffix === "%"
+                  ? `${numericValue}%`
+                  : numericValue;
+              return `<div>${metric.label}: <span class="font-semibold">${formattedValue}</span></div>`;
+            })
+            .join("");
+          return `<div class="text-xs font-medium mb-1">${param.name}</div><div class="text-xs leading-relaxed">${metricRows}</div>`;
         })
-        .join('<br/>')
-      return `<div class="text-xs font-medium">${header}</div><div class="text-xs">${rows}</div>`
-    }
+        .join("<br/>");
+    };
 
+    const series = data.map((item, index) => {
+      const color = SERIES_COLORS[index % SERIES_COLORS.length];
+      const values = [
+        item.budgets ?? 0,
+        item.services ?? 0,
+        item.acceptRate ?? 0,
+        item.cancelRate ?? 0,
+      ];
       return {
-        backgroundColor: 'transparent',
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: formatTooltip,
+        name: item.name,
+        type: "radar",
+        symbol: "circle",
+        symbolSize: 6,
+        lineStyle: {
+          width: 2,
+          color,
         },
-        legend: {
-          data: LEGEND,
-          top: 8,
-          icon: 'circle',
-          textStyle: { color: COLORS.text, fontSize: 12 },
+        itemStyle: {
+          color,
         },
-        grid: { left: 80, right: 32, bottom: 30, top: 96, containLabel: true },
-        xAxis: {
-          type: 'category',
-          data: categories,
-          axisLabel: { color: COLORS.text, interval: 0, rotate: -25, fontSize: 12, formatter: (value) => value.length > 14 ? `${value.slice(0, 14)}…` : value },
-          axisLine: { lineStyle: { color: COLORS.axis } },
+        areaStyle: {
+          color: hexToRgba(color, 0.18),
         },
-      yAxis: [
-        {
-          type: 'value',
-            axisLabel: { color: COLORS.text, margin: 12 },
-            splitLine: { lineStyle: { color: COLORS.grid } },
+        data: [{ value: values, name: item.name }],
+      };
+    });
+
+    return {
+      backgroundColor: "transparent",
+      tooltip: {
+        trigger: "item",
+        formatter: formatTooltip,
+        borderWidth: 0,
+        backgroundColor: "rgba(15,23,42,0.92)",
+        textStyle: { color: COLORS.text },
+      },
+      legend: {
+        data: mechanicNames,
+        top: 8,
+        left: "center",
+        icon: "circle",
+        textStyle: { color: COLORS.text, fontSize: 12 },
+      },
+      radar: {
+        center: ["50%", "58%"],
+        radius: "70%",
+        splitNumber: 4,
+        shape: "circle",
+        indicator: indicators,
+        name: {
+          formatter: (value) => {
+            const metric = METRICS.find((item) => item.label === value);
+            return metric ? `{${metric.richKey}|${value}}` : value;
           },
-          {
-            type: 'value',
-            axisLabel: { formatter: '{value}%', color: COLORS.text, margin: 12 },
-            splitLine: { show: false },
-            min: 0,
-            max: 100,
+          textStyle: {
+            color: COLORS.text,
+            fontSize: 13,
+            fontWeight: 500,
+          },
+          rich: RADAR_NAME_RICH,
         },
-      ],
-      series: [
-        {
-          name: 'Budgets',
-          type: 'bar',
-          data: budgets,
-          barWidth: 12,
-          itemStyle: { color: COLORS.budgets, borderRadius: [4, 4, 0, 0] },
-        },
-        {
-          name: 'Concluídos',
-          type: 'bar',
-          data: concluded,
-          barWidth: 12,
-          itemStyle: { color: COLORS.concluded, borderRadius: [4, 4, 0, 0] },
-        },
-        {
-          name: 'Aceitos',
-          type: 'line',
-          data: acceptance,
-          yAxisIndex: 1,
-          smooth: true,
-          symbolSize: 7,
-          lineStyle: { color: COLORS.accepted, width: 2 },
-          itemStyle: { color: COLORS.accepted },
-        },
-        {
-          name: 'Cancelados',
-          type: 'line',
-          data: cancellation,
-          yAxisIndex: 1,
-          smooth: true,
-          symbolSize: 7,
-          lineStyle: { color: COLORS.cancelled, width: 2 },
-          itemStyle: { color: COLORS.cancelled },
-        },
-      ],
-    }
-  }, [data])
+        axisLine: { lineStyle: { color: COLORS.axis } },
+        splitLine: { lineStyle: { color: COLORS.grid } },
+        splitArea: { areaStyle: { color: ["transparent"] } },
+      },
+      series,
+    };
+  }, [data]);
 
   return (
     <Card className="border-border shadow-sm bg-card/80">
       <CardHeader className="space-y-1.5 pb-0">
         <CardTitle className="text-lg">Comparativo de Mecânicos</CardTitle>
-        <p className="text-xs text-muted-foreground">Budgets, serviços e taxas por profissional.</p>
+        <p className="text-xs text-muted-foreground">
+          Budgets, serviços e taxas por profissional.
+        </p>
       </CardHeader>
-      <CardContent className="pt-4">
-        <div className="h-[630px]">
+      <CardContent className="pt-6">
+        <div className="h-[380px]">
           {loading ? (
             <ChartPlaceholder loading title="Carregando dados..." />
           ) : data.length === 0 ? (
@@ -124,10 +199,15 @@ export function MechanicsComparisonChart({ data = [], loading = false }) {
               description="Cadastre mecânicos ativos e gere budgets para liberar o gráfico."
             />
           ) : (
-            <ReactECharts option={chartOption} notMerge lazyUpdate style={{ height: '100%' }} />
+            <ReactECharts
+              option={chartOption}
+              notMerge
+              lazyUpdate
+              style={{ height: "100%" }}
+            />
           )}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -5,11 +5,24 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Plus, Clock, CheckCircle2, AlertCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
-import { listServices, listClients, listCars } from '@/services/gearbox';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { listServices, listClients, listCars, updateService } from '@/services/gearbox';
 import type { ServiceStatus } from '@/types/api';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchInput } from '@/components/SearchInput';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/components/ui/use-toast';
+import { Input } from '@/components/ui/input';
 
 const statusConfig: Record<
   ServiceStatus,
@@ -41,12 +54,29 @@ const statusConfig: Record<
   },
 };
 
+const SERVICE_STATUS_OPTIONS: ServiceStatus[] = ['Pendente', 'Em andamento', 'Concluído', 'Cancelado'];
+const SERVICE_STATUS_FILTER_OPTIONS: (ServiceStatus | 'todos')[] = ['todos', ...SERVICE_STATUS_OPTIONS];
+
+type StatusDialogPayload = {
+  serviceId: string;
+  clientName: string;
+  currentStatus: ServiceStatus;
+  nextStatus: ServiceStatus;
+};
+
 const currencyFormat = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export default function Ordens() {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'todos'>('todos');
+  const [createdFrom, setCreatedFrom] = useState('');
+  const [createdTo, setCreatedTo] = useState('');
   const { token } = useAuth();
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusDialogPayload, setStatusDialogPayload] = useState<StatusDialogPayload | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const servicesQuery = useQuery({
     queryKey: ['services', token, page],
@@ -66,6 +96,48 @@ export default function Ordens() {
     enabled: Boolean(token),
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ServiceStatus }) => {
+      if (!token) {
+        throw new Error('Sessão expirada');
+      }
+      return updateService(token, id, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      toast({
+        title: 'Status atualizado',
+        description: 'O status do serviço foi sincronizado com o banco.',
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: 'Falha ao atualizar status',
+        description: error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const openStatusDialog = (payload: StatusDialogPayload) => {
+    setStatusDialogPayload(payload);
+    setStatusDialogOpen(true);
+  };
+
+  const closeStatusDialog = () => {
+    setStatusDialogOpen(false);
+    setStatusDialogPayload(null);
+  };
+
+  const confirmStatusChange = () => {
+    if (!statusDialogPayload) return;
+    updateStatusMutation.mutate({
+      id: statusDialogPayload.serviceId,
+      status: statusDialogPayload.nextStatus,
+    });
+    closeStatusDialog();
+  };
+
   const clientMap = useMemo(() => {
     const entries = clientsQuery.data?.data?.map((client) => [client.id, client.nome]) ?? [];
     return new Map(entries);
@@ -79,17 +151,47 @@ export default function Ordens() {
   const services = servicesQuery.data?.data ?? [];
   const filteredServices = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    return services.filter((service) => {
+    const fromDate = createdFrom ? new Date(createdFrom) : null;
+    const toDate = createdTo ? new Date(createdTo) : null;
+
+    const filtered = services.filter((service) => {
+      if (statusFilter !== 'todos' && service.status !== statusFilter) return false;
+      if (fromDate || toDate) {
+        const createdAt = service.createdAt ? new Date(service.createdAt) : null;
+        if (!createdAt) return false;
+        if (fromDate && createdAt < fromDate) return false;
+        if (toDate && createdAt > toDate) return false;
+      }
+      if (!term) return true;
       const clientName = clientMap.get(service.clientId)?.toLowerCase() ?? '';
       const car = carMap.get(service.carId);
       const vehicleText = car ? `${car.marca} ${car.modelo} ${car.placa}`.toLowerCase() : '';
       return (
         service.id.toLowerCase().includes(term) ||
         clientName.includes(term) ||
-        vehicleText.includes(term)
+        vehicleText.includes(term) ||
+        (service.description ?? '').toLowerCase().includes(term)
       );
     });
-  }, [services, searchTerm, clientMap, carMap]);
+
+    return filtered
+      .slice()
+      .sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
+  }, [services, searchTerm, clientMap, carMap, statusFilter, createdFrom, createdTo]);
+
+  const requestStatusChange = (
+    serviceId: string,
+    clientName: string,
+    currentStatus: ServiceStatus,
+    nextStatus: ServiceStatus
+  ) => {
+    if (statusDialogOpen || currentStatus === nextStatus) return;
+    openStatusDialog({ serviceId, clientName, currentStatus, nextStatus });
+  };
 
   return (
     <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8">
@@ -114,6 +216,34 @@ export default function Ordens() {
           }}
         />
       </div>
+      <div className="grid gap-3 md:grid-cols-4">
+        <div className="space-y-1 text-xs">
+          <p className="text-muted-foreground uppercase tracking-wide">Status</p>
+          <Select
+            value={statusFilter}
+            onValueChange={(value: typeof statusFilter) => setStatusFilter(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              {SERVICE_STATUS_FILTER_OPTIONS.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status === 'todos' ? 'Todos' : status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1 text-xs">
+          <p className="text-muted-foreground uppercase tracking-wide">Cadastro a partir</p>
+          <Input type="date" value={createdFrom} onChange={(event) => setCreatedFrom(event.target.value)} />
+        </div>
+        <div className="space-y-1 text-xs">
+          <p className="text-muted-foreground uppercase tracking-wide">Cadastro até</p>
+          <Input type="date" value={createdTo} onChange={(event) => setCreatedTo(event.target.value)} />
+        </div>
+      </div>
 
       {servicesQuery.isLoading ? (
           <div className="flex items-center gap-3 text-muted-foreground">
@@ -128,8 +258,10 @@ export default function Ordens() {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredServices.map((service) => {
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {filteredServices.map((service) => {
+                const statusMutationId = updateStatusMutation.variables?.id;
+                const isUpdatingStatus = statusMutationId === service.id && updateStatusMutation.isPending;
                 const config = statusConfig[service.status];
                 const StatusIcon = config.icon;
                 const clientName = clientMap.get(service.clientId) ?? 'Cliente não encontrado';
@@ -179,6 +311,32 @@ export default function Ordens() {
                           </p>
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">Atualizar status</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Select
+                            value={service.status}
+                            onValueChange={(value) =>
+                              requestStatusChange(service.id, clientName, service.status, value as ServiceStatus)
+                            }
+                            disabled={isUpdatingStatus || statusDialogOpen}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SERVICE_STATUS_OPTIONS.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {isUpdatingStatus && (
+                            <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                          )}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -214,6 +372,41 @@ export default function Ordens() {
             )}
           </>
         )}
+      <AlertDialog
+        open={statusDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeStatusDialog();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar alteração de status</AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusDialogPayload ? (
+                <>
+                  A ordem <span className="font-semibold">{statusDialogPayload.serviceId}</span> do cliente{' '}
+                  <span className="font-semibold">{statusDialogPayload.clientName}</span> será atualizada de{' '}
+                  <span className="font-semibold">{statusDialogPayload.currentStatus}</span> para{' '}
+                  <span className="font-semibold">{statusDialogPayload.nextStatus}</span>. Deseja continuar?
+                </>
+              ) : (
+                'Deseja alterar o status desta ordem de serviço?'
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStatusChange}
+              className="bg-emerald-500 hover:bg-emerald-500/90"
+            >
+              Confirmar alteração
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
