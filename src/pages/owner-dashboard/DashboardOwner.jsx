@@ -74,6 +74,10 @@ export default function DashboardOwner() {
     () => getPeriodRange(selectedPeriod),
     [selectedPeriod]
   );
+  const previousPeriodRange = useMemo(
+    () => getPreviousPeriodRange(selectedPeriod),
+    [selectedPeriod]
+  );
 
   const budgetsInPeriod = useMemo(
     () => filterByPeriod(budgets, (item) => item.createdAt, periodRange),
@@ -83,6 +87,10 @@ export default function DashboardOwner() {
   const servicesInPeriod = useMemo(
     () => filterByPeriod(services, (item) => item.createdAt, periodRange),
     [services, periodRange]
+  );
+  const budgetsPreviousPeriod = useMemo(
+    () => filterByPeriod(budgets, (item) => item.createdAt, previousPeriodRange),
+    [budgets, previousPeriodRange]
   );
 
   const metrics = useMemo(() => {
@@ -273,36 +281,83 @@ export default function DashboardOwner() {
   }, [bestMechanic, budgetsInPeriod, servicesInPeriod]);
 
   const statusData = useMemo(() => {
-    const totals = {
-      aberto: 0,
-      aceito: 0,
-      cancelado: 0,
-      concluido: 0,
-    };
+    const descriptors = [
+      { key: "aberto", label: "Open" },
+      { key: "aceito", label: "Accepted" },
+      { key: "cancelado", label: "Cancelled" },
+      { key: "concluido", label: "Completed" },
+    ];
 
-    budgetsInPeriod.forEach((budget) => {
-      if (!budget.status) return;
-      const normalized = budget.status
-        .toString()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-      if (normalized in totals) {
-        totals[normalized] += 1;
-      }
+    const buildTotals = (items) =>
+      items.reduce(
+        (acc, budget) => {
+          const normalized = normalizeBudgetStatus(budget.status);
+          if (normalized in acc) {
+            acc[normalized] += 1;
+          }
+          return acc;
+        },
+        { aberto: 0, aceito: 0, cancelado: 0, concluido: 0 }
+      );
+
+    const currentTotals = buildTotals(budgetsInPeriod);
+    const previousTotals = buildTotals(budgetsPreviousPeriod);
+
+    const currentTotalBudgets = budgetsInPeriod.length || 0;
+    const previousTotalBudgets = budgetsPreviousPeriod.length || 0;
+
+    const toPercent = (value, total) =>
+      total ? Number(((value / total) * 100).toFixed(1)) : 0;
+
+    return descriptors.map((descriptor) => {
+      const value = currentTotals[descriptor.key];
+      const prevValue = previousTotals[descriptor.key];
+      const percent = toPercent(value, currentTotalBudgets);
+      const prevPercent =
+        previousTotalBudgets > 0
+          ? toPercent(prevValue, previousTotalBudgets)
+          : null;
+      const change =
+        prevPercent === null
+          ? null
+          : Number((percent - prevPercent).toFixed(1));
+
+      return {
+        key: descriptor.key,
+        label: descriptor.label,
+        value,
+        percent,
+        change,
+      };
     });
+  }, [budgetsInPeriod, budgetsPreviousPeriod]);
 
-    const labels = {
-      aberto: "Abertos",
-      aceito: "Aceitos",
-      cancelado: "Cancelados",
-      concluido: "Concluídos",
-    };
+  const statusKpis = useMemo(() => {
+    const totals = statusData.reduce(
+      (acc, item) => {
+        if (item.key === "aceito") acc.accepted = item.value;
+        if (item.key === "cancelado") acc.cancelled = item.value;
+        if (item.key === "concluido") acc.completed = item.value;
+        return acc;
+      },
+      { accepted: 0, cancelled: 0, completed: 0 }
+    );
 
-    return Object.entries(totals)
-      .map(([key, value]) => ({ label: labels[key], value }))
-      .filter((item) => item.value > 0);
-  }, [budgetsInPeriod]);
+    const totalBudgets = budgetsInPeriod.length || 0;
+    const acceptanceRate = totalBudgets
+      ? ((totals.accepted / totalBudgets) * 100).toFixed(1)
+      : "0";
+    const cancellationRate = totalBudgets
+      ? ((totals.cancelled / totalBudgets) * 100).toFixed(1)
+      : "0";
+
+    return [
+      { label: "Budgets no período", value: totalBudgets },
+      { label: "Taxa de aceitação", value: `${acceptanceRate}%` },
+      { label: "Taxa de cancelamento", value: `${cancellationRate}%` },
+      { label: "Orçamentos concluídos", value: totals.completed },
+    ];
+  }, [budgetsInPeriod.length, statusData]);
 
   const selectedMechanic =
     mechanics.find((mechanic) => mechanic.id === selectedMechanicId) ?? null;
@@ -486,7 +541,17 @@ export default function DashboardOwner() {
                 onChange: setSelectedPeriod,
               }}
             />
-            <BudgetStatusChart data={statusData} loading={isLoading} />
+            <BudgetStatusChart
+              data={statusData}
+              kpis={statusKpis}
+              loading={isLoading}
+              period={{
+                value: selectedPeriod,
+                label: periodLabel,
+                options: PERIOD_OPTIONS,
+                onChange: setSelectedPeriod,
+              }}
+            />
           </div>
 
           <UsersTable
@@ -580,6 +645,16 @@ function getPeriodRange(value) {
   }
 }
 
+function getPreviousPeriodRange(value) {
+  const current = getPeriodRange(value);
+  if (!current.start || !current.end) return { start: null, end: null };
+
+  const diff = current.end.getTime() - current.start.getTime();
+  const start = new Date(current.start.getTime() - (diff + 1));
+  const end = new Date(current.end.getTime() - (diff + 1));
+  return { start, end };
+}
+
 function filterByPeriod(items, getDateFn, period) {
   if (!period?.start || !period?.end) return items;
   return items.filter((item) => {
@@ -588,6 +663,17 @@ function filterByPeriod(items, getDateFn, period) {
     if (!date || Number.isNaN(date.getTime())) return false;
     return date >= period.start && date <= period.end;
   });
+}
+
+function normalizeBudgetStatus(status) {
+  if (!status) return "aberto";
+  const normalized = status
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (normalized === "recusado") return "cancelado";
+  return normalized;
 }
 
 function parseAmount(value) {
