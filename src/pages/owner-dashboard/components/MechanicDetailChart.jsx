@@ -21,27 +21,34 @@ export function MechanicDetailChart({ mechanic, data = [], loading = false }) {
       tooltip: { trigger: "axis" },
       legend: {
         data: ["Budgets Criados", "Aceitos", "Serviços"],
-        top: 8,
+        bottom: 0,
         icon: "circle",
-        textStyle: { color: COLORS.text, fontSize: 12 },
+        textStyle: { color: COLORS.text, fontSize: 14 },
+        itemGap: 20,
       },
       grid: {
-        left: 60,
-        right: 60,
+        left: 40,
+        right: 40,
         bottom: 40,
-        top: 60,
+        top: 40,
         containLabel: true,
       },
       xAxis: {
         type: "category",
         boundaryGap: true,
         data: categories,
-        axisLabel: { color: COLORS.text, rotate: -25, interval: 0 },
+        axisLabel: {
+          color: COLORS.text,
+          rotate: -25,
+          interval: 0,
+          fontSize: 13,
+          margin: 16,
+        },
         axisLine: { lineStyle: { color: "rgba(255,255,255,0.25)" } },
       },
       yAxis: {
         type: "value",
-        axisLabel: { color: COLORS.text, margin: 10, fontSize: 11 },
+        axisLabel: { color: COLORS.text, margin: 16, fontSize: 13 },
         splitLine: { lineStyle: { color: COLORS.grid } },
       },
       series: [
@@ -89,7 +96,7 @@ export function MechanicDetailChart({ mechanic, data = [], loading = false }) {
         </p>
       </CardHeader>
       <CardContent className="pt-4">
-        <div className="h-[630px]">
+        <div style={{ height: "450px", width: "100%" }}>
           {loading ? (
             <ChartPlaceholder loading title="Carregando dados..." />
           ) : !hasMechanic ? (

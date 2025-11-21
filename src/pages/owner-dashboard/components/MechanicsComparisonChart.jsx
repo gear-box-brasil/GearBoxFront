@@ -80,7 +80,12 @@ export function MechanicsComparisonChart({ data = [], loading = false }) {
     const concludedMax = Math.max(1, ...concluded);
 
     const indicators = [
-      { name: METRICS[0].label, max: budgetsMax, min: 0, color: METRICS[0].color },
+      {
+        name: METRICS[0].label,
+        max: budgetsMax,
+        min: 0,
+        color: METRICS[0].color,
+      },
       {
         name: METRICS[1].label,
         max: concludedMax,
@@ -101,9 +106,7 @@ export function MechanicsComparisonChart({ data = [], loading = false }) {
               const metric = METRICS[index];
               const numericValue = value ?? 0;
               const formattedValue =
-                metric.suffix === "%"
-                  ? `${numericValue}%`
-                  : numericValue;
+                metric.suffix === "%" ? `${numericValue}%` : numericValue;
               return `<div>${metric.label}: <span class="font-semibold">${formattedValue}</span></div>`;
             })
             .join("");
@@ -150,14 +153,15 @@ export function MechanicsComparisonChart({ data = [], loading = false }) {
       },
       legend: {
         data: mechanicNames,
-        top: 8,
+        bottom: 0,
         left: "center",
         icon: "circle",
-        textStyle: { color: COLORS.text, fontSize: 12 },
+        textStyle: { color: COLORS.text, fontSize: 14 },
+        itemGap: 20,
       },
       radar: {
-        center: ["50%", "58%"],
-        radius: "70%",
+        center: ["50%", "45%"],
+        radius: "65%",
         splitNumber: 4,
         shape: "circle",
         indicator: indicators,
@@ -168,10 +172,11 @@ export function MechanicsComparisonChart({ data = [], loading = false }) {
           },
           textStyle: {
             color: COLORS.text,
-            fontSize: 13,
-            fontWeight: 500,
+            fontSize: 14,
+            fontWeight: 600,
           },
           rich: RADAR_NAME_RICH,
+          gap: 10,
         },
         axisLine: { lineStyle: { color: COLORS.axis } },
         splitLine: { lineStyle: { color: COLORS.grid } },
@@ -190,7 +195,7 @@ export function MechanicsComparisonChart({ data = [], loading = false }) {
         </p>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="h-[380px]">
+        <div style={{ height: "500px", width: "100%" }}>
           {loading ? (
             <ChartPlaceholder loading title="Carregando dados..." />
           ) : data.length === 0 ? (
