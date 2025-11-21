@@ -131,7 +131,7 @@ export function CreateUserModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="mecanico">Mecânico</SelectItem>
-                <SelectItem value="dono">Admin</SelectItem>
+                <SelectItem value="dono">Administrador</SelectItem>
               </SelectContent>
             </Select>
           </div>

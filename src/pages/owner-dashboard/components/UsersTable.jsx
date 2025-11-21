@@ -142,7 +142,7 @@ function DeleteUserButton({ user, onConfirm, deletingId }) {
         {isOwner && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Para remover sua própria conta digite
+              Para remover sua própria conta de administrador digite
               <span className="font-semibold"> {OWNER_CONFIRMATION_PHRASE} </span>
               abaixo.
             </p>

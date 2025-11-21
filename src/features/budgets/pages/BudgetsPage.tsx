@@ -287,14 +287,18 @@ export default function BudgetsPage() {
           {filteredBudgets.map((budget) => {
             const car = carMap.get(budget.carId);
             const clientName = clientMap.get(budget.clientId) ?? 'Cliente não localizado';
-            const mechanicName = budget.userId
-              ? mechanicMap.get(budget.userId) ?? budget.userId.slice(0, 8)
-              : '—';
+            const responsibleName =
+              budget.user?.nome ??
+              (budget.userId
+                ? mechanicMap.get(budget.userId) ?? budget.userId.slice(0, 8)
+                : '—');
             const config = statusConfig[budget.status];
             const createdAt = budget.createdAt ? dateFormat.format(new Date(budget.createdAt)) : '—';
             const formattedAmount = currencyFormat.format(Number(budget.amount) || 0);
             const approving = approveBudgetMutation.variables === budget.id && approveBudgetMutation.isPending;
             const denying = denyBudgetMutation.variables === budget.id && denyBudgetMutation.isPending;
+            const canEditBudget = isOwner || budget.userId === user?.id;
+            const lastUpdatedName = budget.updatedBy?.nome ?? '—';
 
             return (
               <Card
@@ -324,8 +328,8 @@ export default function BudgetsPage() {
                       <p className="font-medium text-foreground">{clientName}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Mecânico responsável</p>
-                      <p className="font-medium text-foreground">{mechanicName}</p>
+                      <p className="text-xs text-muted-foreground">Responsável pela criação</p>
+                      <p className="font-medium text-foreground">{responsibleName}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Veículo</p>
@@ -345,53 +349,81 @@ export default function BudgetsPage() {
                     <p className="text-sm text-foreground">{budget.description}</p>
                   </div>
 
-                  <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="grid gap-4 text-sm md:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Última atualização feita por</p>
+                      <p className="font-medium text-foreground">{lastUpdatedName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Atualizado em</p>
+                      <p className="font-medium text-foreground">
+                        {budget.updatedAt ? dateFormat.format(new Date(budget.updatedAt)) : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 border-t border-border/60 pt-4">
                     <p className="text-xs text-muted-foreground">
                       status: <span className="font-medium text-foreground">{config.label}</span>
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <BudgetFormDialog
-                        mode="edit"
-                        clients={safeClients}
-                        cars={safeCars}
-                        initialValues={{
-                          clientId: budget.clientId,
-                          carId: budget.carId,
-                          description: budget.description,
-                          amount: Number(budget.amount),
-                        }}
-                        onSubmit={(values) => handleEditBudget(budget.id, values)}
-                        renderTrigger={({ open, disabled }) => (
+                      {canEditBudget ? (
+                        <BudgetFormDialog
+                          mode="edit"
+                          clients={safeClients}
+                          cars={safeCars}
+                          initialValues={{
+                            clientId: budget.clientId,
+                            carId: budget.carId,
+                            description: budget.description,
+                            amount: Number(budget.amount),
+                          }}
+                          onSubmit={(values) => handleEditBudget(budget.id, values)}
+                          renderTrigger={({ open, disabled }) => (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-amber-400/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                              onClick={open}
+                              disabled={disabled}
+                            >
+                              Editar
+                            </Button>
+                          )}
+                        />
+                      ) : (
+                      <p className="text-xs text-muted-foreground">
+                          Você não tem permissão para editar este orçamento. Somente o responsável ou o perfil administrador podem alterar este registro.
+                        </p>
+                      )}
+                      {isOwner && (
+                        <>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-amber-400/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
-                            onClick={open}
-                            disabled={disabled}
+                            className="border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                            disabled={budget.status !== 'aberto' || approving}
+                            onClick={() => handleApproveBudget(budget.id)}
                           >
-                            Editar
+                            {approving ? 'Aprovando...' : 'Aprovar'}
                           </Button>
-                        )}
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
-                        disabled={budget.status !== 'aberto' || approving}
-                        onClick={() => handleApproveBudget(budget.id)}
-                      >
-                        {approving ? 'Aprovando...' : 'Aprovar'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
-                        disabled={budget.status !== 'aberto' || denying}
-                        onClick={() => handleDenyBudget(budget.id)}
-                      >
-                        {denying ? 'Negando...' : 'Negar'}
-                      </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                            disabled={budget.status !== 'aberto' || denying}
+                            onClick={() => handleDenyBudget(budget.id)}
+                          >
+                            {denying ? 'Negando...' : 'Negar'}
+                          </Button>
+                        </>
+                      )}
                     </div>
+                    {!isOwner && canEditBudget && (
+                      <p className="text-xs text-muted-foreground">
+                        Você pode editar este orçamento porque é o responsável por ele.
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

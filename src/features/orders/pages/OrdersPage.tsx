@@ -72,7 +72,7 @@ export default function Ordens() {
   const [statusFilter, setStatusFilter] = useState<ServiceStatus | 'todos'>('todos');
   const [createdFrom, setCreatedFrom] = useState('');
   const [createdTo, setCreatedTo] = useState('');
-  const { token } = useAuth();
+  const { token, isOwner, user } = useAuth();
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [statusDialogPayload, setStatusDialogPayload] = useState<StatusDialogPayload | null>(null);
   const queryClient = useQueryClient();
@@ -187,8 +187,10 @@ export default function Ordens() {
     serviceId: string,
     clientName: string,
     currentStatus: ServiceStatus,
-    nextStatus: ServiceStatus
+    nextStatus: ServiceStatus,
+    canUpdate: boolean
   ) => {
+    if (!canUpdate) return;
     if (statusDialogOpen || currentStatus === nextStatus) return;
     openStatusDialog({ serviceId, clientName, currentStatus, nextStatus });
   };
@@ -267,6 +269,7 @@ export default function Ordens() {
                 const clientName = clientMap.get(service.clientId) ?? 'Cliente não encontrado';
                 const car = carMap.get(service.carId);
                 const total = currencyFormat.format(Number(service.totalValue) || 0);
+                const canUpdateService = isOwner || service.userId === user?.id;
                 return (
                   <Card key={service.id} className="border-border shadow-md hover:shadow-lg transition-shadow">
                     <CardContent className="p-6 space-y-4">
@@ -313,33 +316,55 @@ export default function Ordens() {
                       </div>
                       <div className="space-y-2">
                         <p className="text-xs text-muted-foreground">Atualizar status</p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Select
-                            value={service.status}
-                            onValueChange={(value) =>
-                              requestStatusChange(service.id, clientName, service.status, value as ServiceStatus)
-                            }
-                            disabled={isUpdatingStatus || statusDialogOpen}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SERVICE_STATUS_OPTIONS.map((status) => (
-                                <SelectItem key={status} value={status}>
-                                  {status}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {isUpdatingStatus && (
+                        {canUpdateService ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select
+                              value={service.status}
+                              onValueChange={(value) =>
+                                requestStatusChange(
+                                  service.id,
+                                  clientName,
+                                  service.status,
+                                  value as ServiceStatus,
+                                  canUpdateService
+                                )
+                              }
+                              disabled={isUpdatingStatus || statusDialogOpen}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SERVICE_STATUS_OPTIONS.map((status) => (
+                                  <SelectItem key={status} value={status}>
+                                    {status}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {isUpdatingStatus && (
                             <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
                           )}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Somente o perfil administrador ou o responsável desta ordem pode alterar o status.
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Responsável pela criação</p>
+                      <p className="text-sm text-foreground">
+                        {service.user?.nome ?? '—'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Última atualização feita por</p>
+                      <p className="text-sm text-foreground">
+                        {service.updatedBy?.nome ?? '—'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
               })}
             </div>
 

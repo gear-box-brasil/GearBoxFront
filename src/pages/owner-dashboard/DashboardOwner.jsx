@@ -208,8 +208,8 @@ export default function DashboardOwner() {
     const isSelfDeletion = userToDelete.id === user?.id
     if (userToDelete.tipo === 'dono' && userToDelete.id !== user?.id) {
       toast({
-        title: 'Ação não permitida',
-        description: 'Você só pode excluir a sua própria conta de dono.',
+        title: 'Operação restrita',
+        description: 'Você só pode excluir a sua própria conta de administrador.',
         variant: 'destructive',
       })
       return
@@ -261,7 +261,7 @@ export default function DashboardOwner() {
   if (!isOwner) {
     return (
       <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-8">
-        <EmptyState title="Acesso restrito" description="Somente donos podem visualizar este painel." />
+    <EmptyState title="Acesso restrito" description="Somente o perfil administrador pode visualizar este painel." />
       </div>
     )
   }
@@ -272,13 +272,13 @@ export default function DashboardOwner() {
   return (
     <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8 space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <PageHeader
-          eyebrow="Painel Executivo"
-          title="Dashboard do Dono"
-          subtitle="Visão consolidada de budgets, serviços e performance dos mecânicos."
-          align="start"
-          className="gap-2"
-        />
+          <PageHeader
+            eyebrow="Painel Executivo"
+            title="Dashboard do Administrador"
+            subtitle="Visão consolidada de budgets, serviços e performance dos mecânicos."
+            align="start"
+            className="gap-2"
+          />
         <CreateUserModal onSubmit={handleCreateUser} />
       </div>
 

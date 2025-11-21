@@ -48,7 +48,7 @@ const navigationItems = [
     roles: ["dono", "mecanico"],
   },
   {
-    name: "Painel do Dono",
+    name: "Painel do Administrador",
     href: "/owner-dashboard",
     icon: Shield,
     roles: ["dono"],
@@ -56,7 +56,7 @@ const navigationItems = [
 ];
 
 const roleLabel: Record<"dono" | "mecanico", string> = {
-  dono: "Dono",
+  dono: "Administrador",
   mecanico: "Mecânico",
 };
 

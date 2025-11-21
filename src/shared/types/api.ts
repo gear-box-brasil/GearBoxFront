@@ -69,6 +69,10 @@ export interface Service {
   totalValue: string;
   createdAt?: string;
   updatedAt?: string;
+  user?: ApiUser | null;
+  updatedBy?: ApiUser | null;
+  budgetId?: string | null;
+  budget?: Budget | null;
 }
 
 export type BudgetStatus = 'aberto' | 'aceito' | 'recusado' | 'cancelado';
@@ -83,4 +87,6 @@ export interface Budget {
   status: BudgetStatus;
   createdAt?: string;
   updatedAt?: string;
+  user?: ApiUser | null;
+  updatedBy?: ApiUser | null;
 }
