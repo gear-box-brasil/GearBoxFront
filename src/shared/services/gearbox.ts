@@ -128,10 +128,15 @@ export function updateBudget(
   return apiRequest<Budget>(`/budgets/${id}`, { method: 'PUT', body: payload, token });
 }
 
-export function acceptBudget(token: string, id: string) {
+export function acceptBudget(
+  token: string,
+  id: string,
+  payload: { assignedToId: string }
+) {
   return apiRequest<{ budget: Budget; service: Service }>(`/budgets/${id}/accept`, {
     method: 'POST',
     token,
+    body: payload,
   });
 }
 

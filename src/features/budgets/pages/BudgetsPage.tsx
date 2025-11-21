@@ -26,6 +26,14 @@ import type { ApiUser, Budget, BudgetStatus, Car, Client } from '@/types/api';
 import { BudgetFormDialog } from '@/features/budgets/components/BudgetFormDialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/components/ui/dialog';
 
 const EMPTY_CLIENTS: Client[] = [];
 const EMPTY_CARS: Car[] = [];
@@ -66,6 +74,10 @@ export default function BudgetsPage() {
   const [createdFrom, setCreatedFrom] = useState('');
   const [createdTo, setCreatedTo] = useState('');
   const { token, user, isOwner } = useAuth();
+  const isMechanic = user?.role === 'mecanico';
+  const [budgetAssignments, setBudgetAssignments] = useState<Record<string, string>>({});
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [budgetToApprove, setBudgetToApprove] = useState<Budget | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -112,7 +124,8 @@ export default function BudgetsPage() {
   });
 
   const approveBudgetMutation = useMutation({
-    mutationFn: (id: string) => acceptBudget(token!, id),
+    mutationFn: ({ id, assignedToId }: { id: string; assignedToId: string }) =>
+      acceptBudget(token!, id, { assignedToId }),
     onSuccess: ({ service }) => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       queryClient.invalidateQueries({ queryKey: ['services'] });
@@ -161,6 +174,23 @@ export default function BudgetsPage() {
   const safeClients = clients ?? EMPTY_CLIENTS;
   const safeCars = cars ?? EMPTY_CARS;
   const safeMechanics = mechanics ?? EMPTY_USERS;
+
+  const activeMechanics = useMemo(
+    () => safeMechanics.filter((mechanic) => mechanic.tipo === 'mecanico' && mechanic.ativo),
+    [safeMechanics]
+  );
+
+  const activeMechanicIds = useMemo(
+    () => new Set(activeMechanics.map((mechanic) => mechanic.id)),
+    [activeMechanics]
+  );
+
+  const getAssignedMechanicId = (budget: Budget): string | undefined => {
+    const saved = budgetAssignments[budget.id];
+    if (saved) return saved;
+    if (budget.userId && activeMechanicIds.has(budget.userId)) return budget.userId;
+    return activeMechanics[0]?.id;
+  };
 
   const clientMap = useMemo(() => {
     const entries = safeClients.map((client) => [client.id, client.nome] as const);
@@ -244,12 +274,68 @@ export default function BudgetsPage() {
     await editBudgetMutation.mutateAsync({ id, data: values });
   };
 
-  const handleApproveBudget = async (id: string) => {
-    await approveBudgetMutation.mutateAsync(id);
+  const handleSelectMechanic = (budgetId: string, mechanicId: string) => {
+    setBudgetAssignments((prev) => ({
+      ...prev,
+      [budgetId]: mechanicId,
+    }));
+  };
+
+  const openApprovalDialog = (budget: Budget) => {
+    const assigned = getAssignedMechanicId(budget);
+    if (assigned) {
+      handleSelectMechanic(budget.id, assigned);
+    }
+    setBudgetToApprove(budget);
+    setApprovalDialogOpen(true);
+  };
+
+  const closeApprovalDialog = () => {
+    setApprovalDialogOpen(false);
+    setBudgetToApprove(null);
+  };
+
+  const handleConfirmApproval = async () => {
+    if (!budgetToApprove) return;
+
+    const assignedToId = getAssignedMechanicId(budgetToApprove);
+    if (!assignedToId) {
+      toast({
+        title: 'Selecione um mecânico ativo',
+        description: 'Cadastre ou ative um mecânico antes de aprovar este orçamento.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await approveBudgetMutation.mutateAsync({ id: budgetToApprove.id, assignedToId });
+      closeApprovalDialog();
+    } catch {
+      /* toast is handled by mutation */
+    }
+  };
+
+  const handleApproveBudget = async (budget: Budget) => {
+    if (isOwner) {
+      openApprovalDialog(budget);
+      return;
+    }
+    if (!user) return;
+
+    try {
+      await approveBudgetMutation.mutateAsync({ id: budget.id, assignedToId: user.id });
+    } catch {
+      /* toast is handled by mutation */
+    }
   };
 
   const handleDenyBudget = async (id: string) => {
-    await denyBudgetMutation.mutateAsync(id);
+    try {
+      await denyBudgetMutation.mutateAsync(id);
+    } catch {
+      /* toast is handled by mutation */
+    }
   };
 
   const renderBudgetCards = () => {
@@ -295,10 +381,23 @@ export default function BudgetsPage() {
             const config = statusConfig[budget.status];
             const createdAt = budget.createdAt ? dateFormat.format(new Date(budget.createdAt)) : '—';
             const formattedAmount = currencyFormat.format(Number(budget.amount) || 0);
-            const approving = approveBudgetMutation.variables === budget.id && approveBudgetMutation.isPending;
+            const approving =
+              approveBudgetMutation.variables?.id === budget.id && approveBudgetMutation.isPending;
             const denying = denyBudgetMutation.variables === budget.id && denyBudgetMutation.isPending;
             const canEditBudget = isOwner || budget.userId === user?.id;
             const lastUpdatedName = budget.updatedBy?.nome ?? '—';
+            const assignedMechanicId = getAssignedMechanicId(budget);
+            const assignedMechanicLabel =
+              assignedMechanicId && assignedMechanicId.length
+                ? mechanicMap.get(assignedMechanicId) ?? assignedMechanicId.slice(0, 8)
+                : '—';
+            const hasActiveMechanics = activeMechanics.length > 0;
+            const canManageBudget = isOwner || (isMechanic && budget.userId === user?.id);
+            const isOpenForApproval = budget.status === 'aberto';
+            const approveDisabled =
+              !isOpenForApproval ||
+              approving ||
+              (isOwner && !hasActiveMechanics);
 
             return (
               <Card
@@ -366,6 +465,17 @@ export default function BudgetsPage() {
                     <p className="text-xs text-muted-foreground">
                       status: <span className="font-medium text-foreground">{config.label}</span>
                     </p>
+                    {isOwner && (
+                      <p className="text-xs text-muted-foreground">
+                        Mecânico sugerido:{' '}
+                        <span className="font-medium text-foreground">{assignedMechanicLabel}</span>
+                      </p>
+                    )}
+                    {isOwner && !hasActiveMechanics && (
+                      <p className="text-xs text-destructive">
+                        Cadastre um mecânico ativo para aprovar este orçamento.
+                      </p>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
                       {canEditBudget ? (
                         <BudgetFormDialog
@@ -392,18 +502,18 @@ export default function BudgetsPage() {
                           )}
                         />
                       ) : (
-                      <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Você não tem permissão para editar este orçamento. Somente o responsável ou o perfil administrador podem alterar este registro.
                         </p>
                       )}
-                      {isOwner && (
+                      {canManageBudget && (
                         <>
                           <Button
                             size="sm"
                             variant="outline"
                             className="border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
-                            disabled={budget.status !== 'aberto' || approving}
-                            onClick={() => handleApproveBudget(budget.id)}
+                            disabled={approveDisabled}
+                            onClick={() => handleApproveBudget(budget)}
                           >
                             {approving ? 'Aprovando...' : 'Aprovar'}
                           </Button>
@@ -462,12 +572,25 @@ export default function BudgetsPage() {
     );
   };
 
+  const dialogAssignedMechanicId = budgetToApprove ? getAssignedMechanicId(budgetToApprove) : undefined;
+  const dialogApproving =
+    budgetToApprove &&
+    approveBudgetMutation.variables?.id === budgetToApprove.id &&
+    approveBudgetMutation.isPending;
+  const dialogApproveDisabled =
+    !budgetToApprove ||
+    budgetToApprove.status !== 'aberto' ||
+    dialogApproving ||
+    !dialogAssignedMechanicId ||
+    activeMechanics.length === 0;
+
   return (
-    <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8">
-      <PageHeader
-        eyebrow="Financeiro"
-        title="Orçamentos"
-        subtitle="Crie, aprove e acompanhe budgets sem sair do dashboard."
+    <>
+      <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8">
+        <PageHeader
+          eyebrow="Financeiro"
+          title="Orçamentos"
+          subtitle="Crie, aprove e acompanhe budgets sem sair do dashboard."
         actions={
           <BudgetFormDialog
             clients={safeClients}
@@ -527,6 +650,70 @@ export default function BudgetsPage() {
       </div>
 
       <div className="mt-6">{renderBudgetCards()}</div>
-    </div>
+      </div>
+      <Dialog
+        open={approvalDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBudgetToApprove(null);
+          }
+          setApprovalDialogOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Designar mecânico</DialogTitle>
+            <DialogDescription>
+              Escolha o profissional responsável por este orçamento antes de confirmar a aprovação.
+            </DialogDescription>
+          </DialogHeader>
+          {budgetToApprove && (
+            <div className="space-y-2 text-sm">
+              <p className="text-xs text-muted-foreground">Orçamento</p>
+              <p className="font-medium text-foreground">{budgetToApprove.id}</p>
+              <p className="text-xs text-muted-foreground">
+                Cliente: {clientMap.get(budgetToApprove.clientId) ?? '—'}
+              </p>
+            </div>
+          )}
+          <div className="space-y-1 text-xs mt-4">
+            <p className="text-muted-foreground uppercase tracking-wide">Mecânico responsável</p>
+            <Select
+              value={dialogAssignedMechanicId}
+              onValueChange={(value) => {
+                if (budgetToApprove) {
+                  handleSelectMechanic(budgetToApprove.id, value);
+                }
+              }}
+              disabled={activeMechanics.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione um mecânico" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeMechanics.map((mechanic) => (
+                  <SelectItem key={mechanic.id} value={mechanic.id}>
+                    {mechanic.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {activeMechanics.length === 0 && (
+              <p className="text-xs text-destructive">
+                Cadastre um mecânico ativo antes de concluir a aprovação.
+              </p>
+            )}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={closeApprovalDialog}>
+              Cancelar
+            </Button>
+            <Button disabled={dialogApproveDisabled} onClick={handleConfirmApproval}>
+              {dialogApproving ? 'Aprovando...' : 'Confirmar aprovação'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
