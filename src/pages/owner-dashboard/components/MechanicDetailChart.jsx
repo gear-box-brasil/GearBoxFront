@@ -23,7 +23,11 @@ export function MechanicDetailChart({ mechanic, data = [], loading = false }) {
         data: ["Budgets Criados", "Aceitos", "Serviços"],
         bottom: 0,
         icon: "circle",
-        textStyle: { color: COLORS.text, fontSize: 14 },
+        textStyle: {
+          color: COLORS.text,
+          fontSize: 14,
+          fontFamily: "Inter, sans-serif",
+        },
         itemGap: 20,
       },
       grid: {
@@ -43,12 +47,18 @@ export function MechanicDetailChart({ mechanic, data = [], loading = false }) {
           interval: 0,
           fontSize: 13,
           margin: 16,
+          fontFamily: "Inter, sans-serif",
         },
         axisLine: { lineStyle: { color: "rgba(255,255,255,0.25)" } },
       },
       yAxis: {
         type: "value",
-        axisLabel: { color: COLORS.text, margin: 16, fontSize: 13 },
+        axisLabel: {
+          color: COLORS.text,
+          margin: 16,
+          fontSize: 13,
+          fontFamily: "Inter, sans-serif",
+        },
         splitLine: { lineStyle: { color: COLORS.grid } },
       },
       series: [
