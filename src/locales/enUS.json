@@ -17,7 +17,10 @@
       "close": "Close",
       "viewDetails": "View details",
       "expandMenu": "Expand menu",
-      "collapseMenu": "Collapse menu"
+      "collapseMenu": "Collapse menu",
+      "createVehicle": "Create vehicle",
+      "createClient": "Create client",
+      "createBudget": "Create budget"
     },
     "status": {
       "open": "Open",
@@ -299,14 +302,77 @@
     "recentOrdersLoading": "Fetching orders...",
     "recentOrdersError": "Error listing orders",
     "stats": {
-      "orders": "Registered orders",
-      "ordersChange": "{{count}} in progress",
-      "clients": "Clients",
-      "clientsChange": "Total registered",
-      "vehicles": "Vehicles",
-      "vehiclesChange": "Total registered",
-      "revenue": "Estimated revenue",
-      "revenueChange": "Sum of listed orders"
+      "ordersOwner": "Total registered orders",
+      "ordersUser": "Orders you registered",
+      "ordersChange": "{{count}} open or in progress",
+      "clientsOwner": "Total clients",
+      "clientsUser": "Your clients",
+      "clientsChange": "In operation",
+      "vehiclesOwner": "Total vehicles",
+      "vehiclesUser": "Vehicles you manage",
+      "vehiclesChange": "In operation",
+      "revenueOwner": "Shop estimated revenue",
+      "revenueUser": "Estimated revenue from your services",
+      "revenueChange": "Based on listed services"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "overdueShop": "Overdue shop orders",
+      "overdueMine": "Your overdue orders",
+      "pendingBudgets": "Budgets awaiting approval",
+      "slowBudgets": "Budgets stuck for more than {{days}} days",
+      "finishToday": "Services that must finish today",
+      "problemOrders": "Orders with issues",
+      "actionRequired": "Attention",
+      "noIssues": "On track",
+      "empty": "No alerts right now"
+    },
+    "todayTasks": {
+      "title": "Today's tasks",
+      "forecastShop": "Orders expected today (shop)",
+      "forecastUser": "Orders expected today (assigned to you)",
+      "deliveries": "Scheduled deliveries",
+      "pending": "Pending services",
+      "empty": "Nothing scheduled for today"
+    },
+    "labels": {
+      "priority": "Priority",
+      "priorityHigh": "High",
+      "priorityMedium": "Medium",
+      "priorityLow": "Low"
+    },
+    "recentOrders": {
+      "mechanic": "Responsible",
+      "forecast": "Due date",
+      "createdAt": "Created on",
+      "updatedAt": "Updated on {{date}}",
+      "noForecast": "No due date",
+      "noResponsible": "Unassigned",
+      "unknownClient": "Client not found",
+      "unknownVehicle": "Vehicle not found",
+      "noDescription": "No description provided",
+      "overdue": "Overdue"
+    },
+    "detailModal": {
+      "title": "Task details",
+      "subtitle": "Quickly view the related order or budget",
+      "orderId": "Order",
+      "status": "Status",
+      "client": "Client",
+      "vehicle": "Vehicle",
+      "mechanic": "Responsible",
+      "value": "Value",
+      "createdAt": "Created on",
+      "forecast": "Due date",
+      "priority": "Priority",
+      "priorityNone": "Not provided",
+      "alert": "Alert",
+      "onTrack": "On track",
+      "description": "Description",
+      "budgetTitle": "Related budget",
+      "budgetId": "Budget {{id}}",
+      "budgetValue": "Value: {{value}}",
+      "budgetStatus": "Status: {{status}}"
     }
   }
 }

@@ -2,7 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./index.html", "./src/app/**/*.{ts,tsx}", "./src/features/**/*.{ts,tsx}", "./src/shared/**/*.{ts,tsx}"],
+  content: [
+    "./index.html",
+    "./src/app/**/*.{ts,tsx}",
+    "./src/features/**/*.{ts,tsx}",
+    "./src/shared/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -31,6 +36,7 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          light: "hsl(var(--destructive-light))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -58,12 +64,12 @@ export default {
           light: "hsl(var(--warning-light))",
         },
         mechanic: {
-          steel: '#1f2937',
-          graphite: '#111827',
-          rust: '#c2410c',
-          bronze: '#b45309',
-          sky: '#1d4ed8',
-          asphalt: '#0f172a',
+          steel: "#1f2937",
+          graphite: "#111827",
+          rust: "#c2410c",
+          bronze: "#b45309",
+          sky: "#1d4ed8",
+          asphalt: "#0f172a",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -77,14 +83,14 @@ export default {
         },
       },
       backgroundImage: {
-        'gradient-primary': 'var(--gradient-primary)',
-        'gradient-accent': 'var(--gradient-accent)',
-        'gradient-hero': 'var(--gradient-hero)',
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-accent": "var(--gradient-accent)",
+        "gradient-hero": "var(--gradient-hero)",
       },
       boxShadow: {
-        'sm': 'var(--shadow-sm)',
-        'md': 'var(--shadow-md)',
-        'lg': 'var(--shadow-lg)',
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
       },
       borderRadius: {
         lg: "var(--radius)",

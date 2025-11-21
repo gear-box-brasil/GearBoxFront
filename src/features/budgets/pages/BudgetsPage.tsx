@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,7 +56,8 @@ const statusConfig = (
   aberto: {
     label: t("budgets.status.aberto"),
     description: t("budgets.status.aberto"),
-    badgeClass: "bg-sky-500/10 text-sky-200 border border-sky-400/40",
+    badgeClass:
+      "bg-sky-100 dark:bg-sky-500/10 text-sky-700 dark:text-sky-200 border border-sky-200 dark:border-sky-400/40",
   },
   aceito: {
     label: t("budgets.status.aceito"),
@@ -67,12 +68,13 @@ const statusConfig = (
   recusado: {
     label: t("budgets.status.recusado"),
     description: t("budgets.status.recusado"),
-    badgeClass: "bg-rose-500/10 text-rose-200 border border-rose-400/40",
+    badgeClass:
+      "bg-destructive-light text-destructive border border-destructive/30",
   },
   cancelado: {
     label: t("budgets.status.cancelado"),
     description: t("budgets.status.cancelado"),
-    badgeClass: "bg-slate-600/20 text-slate-200 border border-slate-500/30",
+    badgeClass: "bg-muted text-muted-foreground border border-border",
   },
 });
 
@@ -667,7 +669,7 @@ export default function BudgetsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                            className="border-destructive/30 bg-destructive-light text-destructive hover:bg-destructive-light/80"
                             disabled={budget.status !== "aberto" || denying}
                             onClick={() => handleDenyBudget(budget.id)}
                           >
@@ -747,11 +749,12 @@ export default function BudgetsPage() {
               onSubmit={handleCreateBudget}
               renderTrigger={({ open, disabled }) => (
                 <Button
-                  className="bg-gradient-accent hover:opacity-90"
+                  className="gap-2 bg-gradient-accent hover:opacity-90"
                   onClick={open}
                   disabled={createDisabled || disabled}
                 >
-                  {t("common.actions.save")}
+                  <Plus className="w-4 h-4" />
+                  {t("common.actions.createBudget")}
                 </Button>
               )}
             />

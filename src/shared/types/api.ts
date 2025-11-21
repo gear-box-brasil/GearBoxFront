@@ -64,15 +64,28 @@ export interface Service {
   id: string;
   clientId: string;
   carId: string;
+  userId?: string | null;
   status: ServiceStatus;
   description?: string | null;
   totalValue: string;
+  assignedToId?: string | null;
+  createdById?: string | null;
   createdAt?: string;
   updatedAt?: string;
   user?: ApiUser | null;
   updatedBy?: ApiUser | null;
+  assignedTo?: ApiUser | null;
+  createdBy?: ApiUser | null;
   budgetId?: string | null;
   budget?: Budget | null;
+  expectedCompletion?: string | null;
+  expectedDate?: string | null;
+  dueDate?: string | null;
+  forecastDate?: string | null;
+  estimatedDelivery?: string | null;
+  deliveryDate?: string | null;
+  deadline?: string | null;
+  priority?: string | null;
 }
 
 export type BudgetStatus = 'aberto' | 'aceito' | 'recusado' | 'cancelado';

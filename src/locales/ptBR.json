@@ -17,7 +17,10 @@
       "close": "Fechar",
       "viewDetails": "Ver detalhes",
       "expandMenu": "Expandir menu",
-      "collapseMenu": "Recolher menu"
+      "collapseMenu": "Recolher menu",
+      "createVehicle": "Criar carro",
+      "createClient": "Criar cliente",
+      "createBudget": "Criar orçamento"
     },
     "status": {
       "open": "Abertos",
@@ -77,14 +80,14 @@
     "header": {
       "eyebrow": "Painel Executivo",
       "title": "Dashboard do Administrador",
-      "subtitle": "Visão consolidada de budgets, serviços e performance dos mecânicos."
+      "subtitle": "Visão consolidada de orçamentos, serviços e performance dos mecânicos."
     },
     "kpis": {
       "mechanics": "Total de Mecânicos",
-      "budgets": "Budgets Gerados",
+      "budgets": "Orçamentos gerados",
       "acceptance": "% Médio de Aceites",
       "services": "Serviços Concluídos",
-      "periodBudgets": "Budgets no período",
+      "periodBudgets": "Orçamentos no período",
       "generalAcceptance": "Taxa geral de aceitação",
       "generalCancellation": "Taxa de cancelamento",
       "completedBudgets": "Orçamentos concluídos",
@@ -94,9 +97,9 @@
     "charts": {
       "mechanicsComparison": {
         "title": "Comparativo de Mecânicos",
-        "subtitle": "Budgets, serviços e conversão por profissional",
+        "subtitle": "Orçamentos, serviços e conversão por profissional",
         "noData": "Ainda sem comparativos",
-        "noDataDesc": "Cadastre mecânicos ativos e gere budgets para liberar o gráfico.",
+        "noDataDesc": "Cadastre mecânicos ativos e gere orçamentos para liberar o gráfico.",
         "loading": "Carregando dados...",
         "tooltips": {
           "budgets": "Orçamentos recebidos",
@@ -109,10 +112,10 @@
         }
       },
       "status": {
-        "title": "Status dos Budgets",
+        "title": "Status dos orçamentos",
         "subtitle": "Distribuição por status com valores absolutos e porcentagens",
         "noData": "Nenhum status registrado",
-        "noDataDesc": "Assim que surgirem budgets, o status consolidado aparecerá aqui.",
+        "noDataDesc": "Assim que surgirem orçamentos, o status consolidado aparecerá aqui.",
         "table": {
           "status": "Status",
           "quantity": "Quantidade",
@@ -126,7 +129,7 @@
         "select": "Selecione um mecânico para visualizar",
         "selectDesc": "Escolha um profissional na tabela abaixo para carregar esta visão.",
         "empty": "Sem histórico por aqui",
-        "emptyDesc": "Quando este mecânico gerar budgets ou serviços, a evolução aparecerá."
+        "emptyDesc": "Quando este mecânico gerar orçamentos ou serviços, a evolução aparecerá."
       }
     },
     "users": {
@@ -299,14 +302,77 @@
     "recentOrdersLoading": "Buscando ordens...",
     "recentOrdersError": "Erro ao listar ordens",
     "stats": {
-      "orders": "Ordens registradas",
-      "ordersChange": "{{count}} em andamento",
-      "clients": "Clientes",
-      "clientsChange": "Total cadastrados",
-      "vehicles": "Veículos",
-      "vehiclesChange": "Total cadastrados",
-      "revenue": "Receita estimada",
-      "revenueChange": "Somatório das ordens listadas"
+      "ordersOwner": "Ordens registradas totais",
+      "ordersUser": "Ordens registradas por você",
+      "ordersChange": "{{count}} abertas ou em andamento",
+      "clientsOwner": "Clientes totais",
+      "clientsUser": "Seus clientes",
+      "clientsChange": "Em operação",
+      "vehiclesOwner": "Veículos totais",
+      "vehiclesUser": "Veículos sob sua gestão",
+      "vehiclesChange": "Em operação",
+      "revenueOwner": "Receita estimada da oficina",
+      "revenueUser": "Receita estimada dos seus serviços",
+      "revenueChange": "Baseado nos serviços listados"
+    },
+    "alerts": {
+      "title": "Alertas",
+      "overdueShop": "Ordens em atraso na oficina",
+      "overdueMine": "Suas ordens atrasadas",
+      "pendingBudgets": "Orçamentos aguardando aprovação",
+      "slowBudgets": "Orçamentos parados há mais de {{days}} dias",
+      "finishToday": "Serviços que precisam ser concluídos hoje",
+      "problemOrders": "Ordens com problemas",
+      "actionRequired": "Atenção",
+      "noIssues": "Em dia",
+      "empty": "Nenhum alerta por aqui"
+    },
+    "todayTasks": {
+      "title": "Tarefas do dia",
+      "forecastShop": "Ordens previstas para hoje na oficina",
+      "forecastUser": "Ordens previstas para você hoje",
+      "deliveries": "Entregas agendadas",
+      "pending": "Serviços pendentes",
+      "empty": "Sem tarefas para hoje"
+    },
+    "labels": {
+      "priority": "Prioridade",
+      "priorityHigh": "Alta",
+      "priorityMedium": "Média",
+      "priorityLow": "Baixa"
+    },
+    "recentOrders": {
+      "mechanic": "Responsável",
+      "forecast": "Previsão",
+      "createdAt": "Criada em",
+      "updatedAt": "Atualizada em {{date}}",
+      "noForecast": "Sem previsão",
+      "noResponsible": "Não atribuído",
+      "unknownClient": "Cliente não encontrado",
+      "unknownVehicle": "Veículo não localizado",
+      "noDescription": "Sem descrição informada",
+      "overdue": "Atrasada"
+    },
+    "detailModal": {
+      "title": "Detalhes da tarefa",
+      "subtitle": "Consulte rapidamente a ordem ou orçamento relacionado",
+      "orderId": "Ordem",
+      "status": "Status",
+      "client": "Cliente",
+      "vehicle": "Veículo",
+      "mechanic": "Responsável",
+      "value": "Valor",
+      "createdAt": "Criada em",
+      "forecast": "Previsão",
+      "priority": "Prioridade",
+      "priorityNone": "Não informada",
+      "alert": "Alerta",
+      "onTrack": "No prazo",
+      "description": "Descrição",
+      "budgetTitle": "Orçamento relacionado",
+      "budgetId": "Orçamento {{id}}",
+      "budgetValue": "Valor: {{value}}",
+      "budgetStatus": "Status do orçamento: {{status}}"
     }
   }
 }

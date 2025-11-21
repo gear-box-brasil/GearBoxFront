@@ -132,7 +132,7 @@ export default function Layout() {
                         ? "justify-center px-2 py-3"
                         : "justify-start gap-3 px-4 py-3",
                       isActive
-                        ? "bg-[rgba(245,163,0,0.15)] text-[var(--sidebar-icon-active)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
+                        ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-icon-active)] shadow-sm"
                         : "text-[var(--sidebar-icon-inactive)] hover:bg-[var(--sidebar-hover-bg)] hover:text-[var(--sidebar-text)]"
                     )}
                   >

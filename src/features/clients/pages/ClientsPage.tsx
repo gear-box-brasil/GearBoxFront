@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Loader2, Car, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
-import { PageHeader } from '@/components/PageHeader';
-import { SearchInput } from '@/components/SearchInput';
-import { EmptyState } from '@/components/EmptyState';
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Mail, Phone, Loader2, Car, Trash2, Plus } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import { PageHeader } from "@/components/PageHeader";
+import { SearchInput } from "@/components/SearchInput";
+import { EmptyState } from "@/components/EmptyState";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   listClients,
   listCars,
@@ -27,14 +27,14 @@ import {
   updateClient,
   deleteClient,
   createCar,
-} from '@/services/gearbox';
-import type { Client, Car as CarType } from '@/types/api';
-import { ClientFormDialog } from '@/features/clients/components/ClientFormDialog';
-import { ClientCarDialog } from '@/features/clients/components/ClientCarDialog';
-import { useTranslation } from 'react-i18next';
+} from "@/services/gearbox";
+import type { Client, Car as CarType } from "@/types/api";
+import { ClientFormDialog } from "@/features/clients/components/ClientFormDialog";
+import { ClientCarDialog } from "@/features/clients/components/ClientCarDialog";
+import { useTranslation } from "react-i18next";
 
 export default function ClientsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const { token, isOwner } = useAuth();
   const queryClient = useQueryClient();
@@ -42,61 +42,78 @@ export default function ClientsPage() {
   const { t } = useTranslation();
 
   const clientsQuery = useQuery({
-    queryKey: ['clients', token, page],
+    queryKey: ["clients", token, page],
     queryFn: () => listClients(token!, { page, perPage: 9 }),
     enabled: Boolean(token),
     keepPreviousData: true,
   });
 
   const carsQuery = useQuery({
-    queryKey: ['cars', token, 'clients-page'],
+    queryKey: ["cars", token, "clients-page"],
     queryFn: () => listCars(token!, { page: 1, perPage: 200 }),
     enabled: Boolean(token),
     staleTime: 5 * 60 * 1000,
   });
 
   const createClientMutation = useMutation({
-    mutationFn: (payload: { nome: string; telefone: string; email?: string }) => createClient(token!, payload),
+    mutationFn: (payload: { nome: string; telefone: string; email?: string }) =>
+      createClient(token!, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
     },
   });
 
   const updateClientMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { nome: string; telefone: string; email?: string } }) =>
-      updateClient(token!, id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { nome: string; telefone: string; email?: string };
+    }) => updateClient(token!, id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
     },
   });
 
   const deleteClientMutation = useMutation({
     mutationFn: (id: string) => deleteClient(token!, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       toast({
-        title: t('common.actions.delete'),
-        description: t('common.empty.noData'),
+        title: t("common.actions.delete"),
+        description: t("common.empty.noData"),
       });
     },
     onError: (error: unknown) => {
       toast({
-        title: t('orders.toasts.updateError'),
-        description: error instanceof Error ? error.message : t('budgets.toasts.defaultError'),
-        variant: 'destructive',
+        title: t("orders.toasts.updateError"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("budgets.toasts.defaultError"),
+        variant: "destructive",
       });
     },
   });
 
   const createCarMutation = useMutation({
-    mutationFn: (payload: { clientId: string; placa: string; marca: string; modelo: string; ano: number }) =>
-      createCar(token!, payload),
+    mutationFn: (payload: {
+      clientId: string;
+      placa: string;
+      marca: string;
+      modelo: string;
+      ano: number;
+    }) => createCar(token!, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cars'] });
+      queryClient.invalidateQueries({ queryKey: ["cars"] });
     },
   });
 
-  const clients = useMemo(() => clientsQuery.data?.data ?? [], [clientsQuery.data]);
+  const clients = useMemo(
+    () => clientsQuery.data?.data ?? [],
+    [clientsQuery.data]
+  );
   const cars = useMemo(() => carsQuery.data?.data ?? [], [carsQuery.data]);
 
   const carsByClient = useMemo(() => groupCarsByClient(cars), [cars]);
@@ -111,36 +128,54 @@ export default function ClientsPage() {
         client.telefone.toLowerCase().includes(term);
       if (matchesBase) return true;
       const clientCars = carsByClient.get(client.id) ?? [];
-      return clientCars.some((car) => `${car.marca} ${car.modelo} ${car.placa}`.toLowerCase().includes(term));
+      return clientCars.some((car) =>
+        `${car.marca} ${car.modelo} ${car.placa}`.toLowerCase().includes(term)
+      );
     });
   }, [clients, searchTerm, carsByClient]);
 
   const isLoading = clientsQuery.isLoading || carsQuery.isLoading;
   const isError = clientsQuery.isError || carsQuery.isError;
 
-  const handleCreateClient = (values: { nome: string; telefone: string; email?: string }) =>
-    createClientMutation.mutateAsync(values);
+  const handleCreateClient = (values: {
+    nome: string;
+    telefone: string;
+    email?: string;
+  }) => createClientMutation.mutateAsync(values);
 
-  const handleEditClient = (id: string, values: { nome: string; telefone: string; email?: string }) =>
-    updateClientMutation.mutateAsync({ id, data: values });
+  const handleEditClient = (
+    id: string,
+    values: { nome: string; telefone: string; email?: string }
+  ) => updateClientMutation.mutateAsync({ id, data: values });
 
-  const handleDeleteClient = (id: string) => deleteClientMutation.mutateAsync(id);
+  const handleDeleteClient = (id: string) =>
+    deleteClientMutation.mutateAsync(id);
 
-  const handleAddCar = (values: { clientId: string; placa: string; marca: string; modelo: string; ano: number }) =>
-    createCarMutation.mutateAsync(values);
+  const handleAddCar = (values: {
+    clientId: string;
+    placa: string;
+    marca: string;
+    modelo: string;
+    ano: number;
+  }) => createCarMutation.mutateAsync(values);
 
   return (
     <div className="page-container bg-gradient-hero rounded-2xl border border-border shadow-lg p-6 md:p-8">
       <PageHeader
-        eyebrow={t('owner.header.eyebrow')}
-        title={t('clients.title')}
-        subtitle={t('clients.subtitle')}
+        eyebrow={t("owner.header.eyebrow")}
+        title={t("clients.title")}
+        subtitle={t("clients.subtitle")}
         actions={
           <ClientFormDialog
             onSubmit={handleCreateClient}
             renderTrigger={({ open, disabled }) => (
-              <Button className="bg-gradient-accent hover:opacity-90" onClick={open} disabled={disabled}>
-                {t('common.actions.save')}
+              <Button
+                className="gap-2 bg-gradient-accent hover:opacity-90"
+                onClick={open}
+                disabled={disabled}
+              >
+                <Plus className="w-4 h-4" />
+                {t("common.actions.createClient")}
               </Button>
             )}
           />
@@ -149,7 +184,7 @@ export default function ClientsPage() {
 
       <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <SearchInput
-          placeholder={t('clients.search')}
+          placeholder={t("clients.search")}
           value={searchTerm}
           onChange={(event) => {
             setSearchTerm(event.target.value);
@@ -158,14 +193,15 @@ export default function ClientsPage() {
           wrapperClassName="max-w-xl"
         />
         <p className="text-xs text-muted-foreground">
-          {clientsQuery.data?.meta?.total ?? 0} {t('clients.title').toLowerCase()}
+          {clientsQuery.data?.meta?.total ?? 0}{" "}
+          {t("clients.title").toLowerCase()}
         </p>
       </div>
 
       {isLoading ? (
         <div className="mt-10 flex items-center gap-3 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
-          {t('charts.placeholder.loading')}
+          {t("charts.placeholder.loading")}
         </div>
       ) : isError ? (
         <p className="mt-10 text-destructive">
@@ -173,13 +209,13 @@ export default function ClientsPage() {
             ? clientsQuery.error.message
             : carsQuery.error instanceof Error
             ? carsQuery.error.message
-            : t('emptyState.error')}
+            : t("emptyState.error")}
         </p>
       ) : filteredClients.length === 0 ? (
         <div className="mt-10">
           <EmptyState
-            title={t('clients.table.empty')}
-            description={t('clients.subtitle')}
+            title={t("clients.table.empty")}
+            description={t("clients.subtitle")}
           />
         </div>
       ) : (
@@ -187,38 +223,57 @@ export default function ClientsPage() {
           <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {filteredClients.map((client) => {
               const clientCars = carsByClient.get(client.id) ?? [];
-              const createdBy = client.createdByUser?.nome ?? '—';
-              const updatedBy = client.updatedByUser?.nome ?? '—';
+              const createdBy = client.createdByUser?.nome ?? "—";
+              const updatedBy = client.updatedByUser?.nome ?? "—";
               const createdAt = client.createdAt
-                ? new Date(client.createdAt).toLocaleDateString('pt-BR')
-                : '—';
+                ? new Date(client.createdAt).toLocaleDateString("pt-BR")
+                : "—";
               const updatedAt = client.updatedAt
-                ? new Date(client.updatedAt).toLocaleDateString('pt-BR')
-                : '—';
-              const deleting = deleteClientMutation.variables === client.id && deleteClientMutation.isPending;
+                ? new Date(client.updatedAt).toLocaleDateString("pt-BR")
+                : "—";
+              const deleting =
+                deleteClientMutation.variables === client.id &&
+                deleteClientMutation.isPending;
 
               return (
-                <Card key={client.id} className="border-border shadow-md hover:shadow-lg transition-shadow">
+                <Card
+                  key={client.id}
+                  className="border-border shadow-md hover:shadow-lg transition-shadow"
+                >
                   <CardContent className="space-y-5 p-6">
                     <div className="flex flex-col gap-2">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('clients.table.name')}</p>
-                      <h3 className="text-xl font-semibold text-foreground">{client.nome}</h3>
-                      <p className="text-xs text-muted-foreground">ID: {client.id}</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {t("clients.table.name")}
+                      </p>
+                      <h3 className="text-xl font-semibold text-foreground">
+                        {client.nome}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {client.id}
+                      </p>
                     </div>
 
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
                         <Mail className="w-4 h-4 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="text-xs text-muted-foreground">{t('clients.table.email')}</p>
-                          <p className="text-sm text-foreground">{client.email ?? t('common.empty.noData')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("clients.table.email")}
+                          </p>
+                          <p className="text-sm text-foreground">
+                            {client.email ?? t("common.empty.noData")}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="text-xs text-muted-foreground">{t('clients.table.phone')}</p>
-                          <p className="text-sm text-foreground">{client.telefone}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("clients.table.phone")}
+                          </p>
+                          <p className="text-sm text-foreground">
+                            {client.telefone}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -226,8 +281,12 @@ export default function ClientsPage() {
                     <div className="rounded-lg border border-border/60 bg-background/40 p-4">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <p className="text-xs text-muted-foreground">{t('vehicles.title')}</p>
-                          <p className="text-sm font-semibold text-foreground">{clientCars.length || t('common.empty.noData')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("vehicles.title")}
+                          </p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {clientCars.length || t("common.empty.noData")}
+                          </p>
                         </div>
                         <ClientCarDialog
                           clientId={client.id}
@@ -237,12 +296,12 @@ export default function ClientsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-sky-400/60 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
+                              className="border-sky-200 dark:border-sky-400/60 bg-sky-100 dark:bg-sky-500/10 text-sky-700 dark:text-sky-200 hover:bg-sky-200 dark:hover:bg-sky-500/20"
                               onClick={open}
                               disabled={disabled || createCarMutation.isPending}
                             >
                               <Car className="mr-1 h-3.5 w-3.5" />
-                              {t('common.actions.save')}
+                              {t("common.actions.save")}
                             </Button>
                           )}
                         />
@@ -250,24 +309,36 @@ export default function ClientsPage() {
                       {clientCars.length > 0 ? (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {clientCars.map((car) => (
-                            <Badge key={car.id} variant="outline" className="text-xs">
+                            <Badge
+                              key={car.id}
+                              variant="outline"
+                              className="text-xs"
+                            >
                               {car.placa} · {car.marca} {car.modelo}
                             </Badge>
                           ))}
                         </div>
                       ) : (
                         <p className="mt-3 text-xs text-muted-foreground">
-                          {t('vehicles.table.empty')}
+                          {t("vehicles.table.empty")}
                         </p>
                       )}
                     </div>
 
                     <div className="grid gap-2 rounded-lg border border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
                       <p>
-                        Cadastrado por <span className="font-semibold text-foreground">{createdBy}</span> em {createdAt}
+                        Cadastrado por{" "}
+                        <span className="font-semibold text-foreground">
+                          {createdBy}
+                        </span>{" "}
+                        em {createdAt}
                       </p>
                       <p>
-                        Atualizado por <span className="font-semibold text-foreground">{updatedBy}</span> em {updatedAt}
+                        Atualizado por{" "}
+                        <span className="font-semibold text-foreground">
+                          {updatedBy}
+                        </span>{" "}
+                        em {updatedAt}
                       </p>
                     </div>
 
@@ -277,14 +348,16 @@ export default function ClientsPage() {
                         initialValues={{
                           nome: client.nome,
                           telefone: client.telefone,
-                          email: client.email ?? '',
+                          email: client.email ?? "",
                         }}
-                        onSubmit={(values) => handleEditClient(client.id, values)}
+                        onSubmit={(values) =>
+                          handleEditClient(client.id, values)
+                        }
                         renderTrigger={({ open, disabled }) => (
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-amber-400/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                            className="border-warning/30 bg-warning-light text-warning hover:bg-warning-light/80"
                             onClick={open}
                             disabled={disabled}
                           >
@@ -298,25 +371,28 @@ export default function ClientsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-rose-400/60 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                              className="border-destructive/30 bg-destructive-light text-destructive hover:bg-destructive-light/80"
                               disabled={deleting}
                             >
                               <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                              {deleting ? 'Excluindo...' : 'Excluir'}
+                              {deleting ? "Excluindo..." : "Excluir"}
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Remover cliente</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                Remover cliente
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Esta ação remove {client.nome} e todos os veículos vinculados. Deseja continuar?
+                                Esta ação remove {client.nome} e todos os
+                                veículos vinculados. Deseja continuar?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDeleteClient(client.id)}
-                                className="bg-rose-500 hover:bg-rose-500/90"
+                                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                               >
                                 Confirmar exclusão
                               </AlertDialogAction>
@@ -334,7 +410,8 @@ export default function ClientsPage() {
           {clientsQuery.data?.meta && (
             <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <p className="text-sm text-muted-foreground">
-                Página {clientsQuery.data.meta.currentPage} de {clientsQuery.data.meta.lastPage}
+                Página {clientsQuery.data.meta.currentPage} de{" "}
+                {clientsQuery.data.meta.lastPage}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -349,7 +426,8 @@ export default function ClientsPage() {
                   variant="outline"
                   size="sm"
                   disabled={
-                    page === clientsQuery.data.meta.lastPage || clientsQuery.isFetching
+                    page === clientsQuery.data.meta.lastPage ||
+                    clientsQuery.isFetching
                   }
                   onClick={() => setPage((prev) => prev + 1)}
                 >

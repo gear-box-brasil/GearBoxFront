@@ -37,6 +37,7 @@ All colors MUST be HSL.
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+    --destructive-light: 0 84.2% 97%;
 
     --success: 142.1 76.2% 36.3%;
     --success-light: 142.1 70% 95%;
@@ -63,6 +64,7 @@ All colors MUST be HSL.
     --sidebar-logout-bg: #f2f3f4;
     --sidebar-logout-hover: #e5e7e9;
     --sidebar-logout-icon: #2e3a45;
+    --sidebar-active-bg: #e5e7eb;
   }
 
   .dark {
@@ -91,14 +93,15 @@ All colors MUST be HSL.
 
     --accent-light: 39.92 100% 35%;
 
-    --destructive: 1.13 83.25% 62.55%;
+    --destructive: 0 90% 75%;
     --destructive-foreground: 202.5 21.05% 7.45%;
+    --destructive-light: 0 90% 15%;
 
-    --success: 122.42 39.44% 49.22%;
-    --success-light: 122.42 39.44% 25%;
+    --success: 140 70% 70%;
+    --success-light: 140 70% 15%;
 
-    --warning: 30.37 100% 48.04%;
-    --warning-light: 30.37 100% 30%;
+    --warning: 45 100% 51.37%;
+    --warning-light: 45 100% 15%;
 
     --border: 200 12% 14.71%;
     --input: 200 12% 14.71%;
@@ -118,6 +121,7 @@ All colors MUST be HSL.
     --sidebar-icon-active: #ffc107;
     --sidebar-icon-inactive: #9ba1a6;
     --sidebar-border-color: #f5a300;
+    --sidebar-active-bg: rgba(245, 163, 0, 0.15);
     --logo-fill: #e8eaed;
     --logo-accent: #ffc107;
     --sidebar-user-name: #e8eaed;
