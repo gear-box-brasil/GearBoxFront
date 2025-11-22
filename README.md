@@ -64,7 +64,13 @@ O projeto foi construído com foco em uma experiência de usuário de alta quali
 - bun ou npm (o projeto já traz `package-lock.json`, então usamos `npm` nos exemplos)
 
 ### 2. Variáveis de ambiente
-Crie um arquivo `.env` na raiz e defina a URL da API AdonisJS:
+Copie o exemplo e defina a URL da API AdonisJS:
+
+```bash
+cp .env.example .env
+```
+
+Edite o arquivo e configure:
 
 ```bash
 VITE_API_BASE_URL=http://localhost:3333
