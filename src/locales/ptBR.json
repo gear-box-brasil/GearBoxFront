@@ -198,14 +198,14 @@
       "cancelled": "Cancelado"
     },
     "table": {
-    "order": "Ordem",
-    "client": "Cliente",
-    "vehicle": "Veículo",
-    "status": "Status",
-    "createdAt": "Criado em",
-    "actions": "Ações",
-    "empty": "Nenhuma ordem encontrada."
-  },
+      "order": "Ordem",
+      "client": "Cliente",
+      "vehicle": "Veículo",
+      "status": "Status",
+      "createdAt": "Criado em",
+      "actions": "Ações",
+      "empty": "Nenhuma ordem encontrada."
+    },
     "dialogs": {
       "updateStatusTitle": "Atualizar status",
       "updateStatusDescription": "Confirme a mudança de status desta ordem.",
@@ -265,7 +265,8 @@
       "aberto": "Aberto",
       "aceito": "Aceito",
       "recusado": "Negado",
-      "cancelado": "Cancelado"
+      "cancelado": "Cancelado",
+      "cancelar": "Cancelar"
     },
     "table": {
       "code": "Orçamento",
@@ -284,6 +285,9 @@
       "rejectTitle": "Orçamento negado",
       "rejectDescription": "O status foi atualizado para negado.",
       "rejectError": "Não foi possível negar o orçamento",
+      "updateTitle": "Orçamento atualizado",
+      "updateDescription": "Alterações salvas com sucesso.",
+      "updateError": "Não foi possível salvar o orçamento",
       "defaultError": "Tente novamente."
     },
     "pagination": {
@@ -292,7 +296,10 @@
       "next": "Próxima"
     },
     "messages": {
-      "noPermission": "Você não tem permissão para editar este orçamento. Somente o responsável ou o perfil administrador podem alterar este registro."
+      "noPermission": "Você não tem permissão para editar este orçamento. Somente o responsável ou o perfil administrador podem alterar este registro.",
+      "confirmEdit": "Deseja editar este orçamento?",
+      "confirmApprove": "Confirmar aprovação deste orçamento?",
+      "confirmCancel": "Deseja cancelar este orçamento?"
     }
   },
   "clients": {
@@ -373,7 +380,7 @@
       "mechanic": "Responsável",
       "forecast": "Previsão",
       "createdAt": "Criada em",
-      "updatedAt": "Atualizada em {{date}}",
+      "updatedAt": "Atualizada em",
       "noForecast": "Sem previsão",
       "noResponsible": "Não atribuído",
       "unknownClient": "Cliente não encontrado",

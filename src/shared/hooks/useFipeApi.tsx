@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 const FIPE_BASE_URL = "https://parallelum.com.br/fipe/api/v1";
 
@@ -28,92 +28,57 @@ export interface FipeVehicle {
   SiglaCombustivel: string;
 }
 
+const fipeRequest = async <T>(path: string): Promise<T> => {
+  const response = await fetch(`${FIPE_BASE_URL}${path}`);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Erro ao comunicar com a FIPE");
+  }
+  return (await response.json()) as T;
+};
+
+const mapQueryState = (query: { isLoading: boolean; error: unknown }) => ({
+  loading: query.isLoading,
+  error: query.error instanceof Error ? query.error.message : null,
+});
+
 export function useFipeBrands() {
-  const [brands, setBrands] = useState<FipeBrand[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["fipe", "brands"],
+    queryFn: () => fipeRequest<FipeBrand[]>("/carros/marcas"),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    async function fetchBrands() {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${FIPE_BASE_URL}/carros/marcas`);
-        if (!response.ok) throw new Error("Erro ao buscar marcas");
-        const data = await response.json();
-        setBrands(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro desconhecido");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchBrands();
-  }, []);
-
-  return { brands, loading, error };
+  return { brands: query.data ?? [], ...mapQueryState(query) };
 }
 
 export function useFipeModels(brandCode: string | null) {
-  const [models, setModels] = useState<FipeModel[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["fipe", "models", brandCode],
+    queryFn: () =>
+      fipeRequest<{ modelos: FipeModel[] }>(
+        `/carros/marcas/${brandCode}/modelos`
+      ),
+    enabled: Boolean(brandCode),
+    staleTime: 24 * 60 * 60 * 1000,
+    select: (data) => data.modelos ?? [],
+  });
 
-  useEffect(() => {
-    if (!brandCode) {
-      setModels([]);
-      return;
-    }
-
-    async function fetchModels() {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${FIPE_BASE_URL}/carros/marcas/${brandCode}/modelos`);
-        if (!response.ok) throw new Error("Erro ao buscar modelos");
-        const data = await response.json();
-        setModels(data.modelos || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro desconhecido");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchModels();
-  }, [brandCode]);
-
-  return { models, loading, error };
+  return { models: query.data ?? [], ...mapQueryState(query) };
 }
 
 export function useFipeYears(brandCode: string | null, modelCode: string | null) {
-  const [years, setYears] = useState<FipeYear[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["fipe", "years", brandCode, modelCode],
+    queryFn: () =>
+      fipeRequest<FipeYear[]>(
+        `/carros/marcas/${brandCode}/modelos/${modelCode}/anos`
+      ),
+    enabled: Boolean(brandCode && modelCode),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    if (!brandCode || !modelCode) {
-      setYears([]);
-      return;
-    }
-
-    async function fetchYears() {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${FIPE_BASE_URL}/carros/marcas/${brandCode}/modelos/${modelCode}/anos`);
-        if (!response.ok) throw new Error("Erro ao buscar anos");
-        const data = await response.json();
-        setYears(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erro desconhecido");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchYears();
-  }, [brandCode, modelCode]);
-
-  return { years, loading, error };
+  return { years: query.data ?? [], ...mapQueryState(query) };
 }
 
 export async function getFipeVehicleDetails(
@@ -122,12 +87,9 @@ export async function getFipeVehicleDetails(
   yearCode: string
 ): Promise<FipeVehicle | null> {
   try {
-    const response = await fetch(
-      `${FIPE_BASE_URL}/carros/marcas/${brandCode}/modelos/${modelCode}/anos/${yearCode}`
+    return await fipeRequest<FipeVehicle>(
+      `/carros/marcas/${brandCode}/modelos/${modelCode}/anos/${yearCode}`
     );
-    if (!response.ok) throw new Error("Erro ao buscar detalhes do veículo");
-    const data = await response.json();
-    return data;
   } catch (err) {
     console.error("Erro ao buscar detalhes:", err);
     return null;

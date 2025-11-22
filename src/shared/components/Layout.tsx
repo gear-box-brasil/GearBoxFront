@@ -102,6 +102,7 @@ export default function Layout() {
       <aside
         className="sidebar-shell"
         style={{ width: `${sidebarPixelWidth}px` }}
+        aria-label={t("navigation.dashboard")}
       >
         <div className="flex flex-col flex-1">
           <div className="sidebar-brand">
@@ -121,7 +122,11 @@ export default function Layout() {
             </div>
           </div>
 
-          <nav className="sidebar-nav flex-1 space-y-1">
+          <nav
+            className="sidebar-nav flex-1 space-y-1"
+            role="navigation"
+            aria-label={t("navigation.dashboard")}
+          >
             {navigation.map((item) => (
               <NavLink key={item.name} to={item.href} end={item.href === "/"}>
                 {({ isActive }) => (

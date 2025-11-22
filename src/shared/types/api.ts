@@ -97,6 +97,7 @@ export interface Budget {
   clientId: string;
   carId: string;
   userId: string | null;
+  createdById?: string | null;
   description: string;
   amount: string;
   status: BudgetStatus;
@@ -105,4 +106,5 @@ export interface Budget {
   updatedAt?: string;
   user?: ApiUser | null;
   updatedBy?: ApiUser | null;
+  createdBy?: ApiUser | null;
 }

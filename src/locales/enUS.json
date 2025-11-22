@@ -265,7 +265,8 @@
       "aberto": "Open",
       "aceito": "Accepted",
       "recusado": "Declined",
-      "cancelado": "Cancelled"
+      "cancelado": "Cancelled",
+      "cancelar": "Cancel"
     },
     "table": {
       "code": "Budget",
@@ -284,6 +285,9 @@
       "rejectTitle": "Budget declined",
       "rejectDescription": "Status updated to declined.",
       "rejectError": "Could not decline budget",
+      "updateTitle": "Budget updated",
+      "updateDescription": "Changes saved successfully.",
+      "updateError": "Could not save the budget",
       "defaultError": "Please try again."
     },
     "pagination": {
@@ -292,7 +296,10 @@
       "next": "Next"
     },
     "messages": {
-      "noPermission": "You do not have permission to edit this budget. Only the owner or admin can update this record."
+      "noPermission": "You do not have permission to edit this budget. Only the owner or admin can update this record.",
+      "confirmEdit": "Do you want to edit this budget?",
+      "confirmApprove": "Confirm approval of this budget?",
+      "confirmCancel": "Do you want to cancel this budget?"
     }
   },
   "clients": {

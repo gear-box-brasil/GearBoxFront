@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
@@ -13,9 +13,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import {
-  listBudgets,
-  listClients,
-  listCars,
   listUsers,
   createBudget,
   updateBudget,
@@ -33,6 +30,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -41,6 +48,10 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { useTranslation } from "react-i18next";
+import { useBudgets } from "@/hooks/useBudgets";
+import { useClients } from "@/hooks/useClients";
+import { useCars } from "@/hooks/useCars";
+import { gearboxKeys } from "@/lib/queryKeys";
 
 const EMPTY_CLIENTS: Client[] = [];
 const EMPTY_CARS: Car[] = [];
@@ -154,38 +165,30 @@ export default function BudgetsPage() {
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
   const { token, user, isOwner } = useAuth();
-  const isMechanic = user?.role === "mecanico";
   const [budgetAssignments, setBudgetAssignments] = useState<
     Record<string, string>
   >({});
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [budgetToApprove, setBudgetToApprove] = useState<Budget | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    action: "edit" | "approve" | "cancel";
+    proceed: () => Promise<void> | void;
+    resolve?: () => void;
+    reject?: (error?: unknown) => void;
+  } | null>(null);
+  const confirmDialogActionRef = useRef<"confirm" | "cancel" | null>(null);
+  const confirmDialogSettledRef = useRef(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { t } = useTranslation();
 
-  const budgetsQuery = useQuery({
-    queryKey: ["budgets", token, page],
-    queryFn: () => listBudgets(token!, { page, perPage: 10 }),
-    enabled: Boolean(token),
-    keepPreviousData: true,
-  });
-
-  const clientsQuery = useQuery({
-    queryKey: ["clients", token, "budget-map"],
-    queryFn: () => listClients(token!, { page: 1, perPage: 100 }),
-    enabled: Boolean(token),
-  });
-
-  const carsQuery = useQuery({
-    queryKey: ["cars", token, "budget-map"],
-    queryFn: () => listCars(token!, { page: 1, perPage: 100 }),
-    enabled: Boolean(token),
-  });
+  const budgetsQuery = useBudgets({ page, perPage: 10 });
+  const clientsQuery = useClients({ page: 1, perPage: 200 });
+  const carsQuery = useCars({ page: 1, perPage: 200 });
 
   const mechanicsQuery = useQuery({
-    queryKey: ["users", token, "budget-mechanics"],
+    queryKey: gearboxKeys.users.list({ page: 1, perPage: 100 }),
     queryFn: () => listUsers(token!, { page: 1, perPage: 100 }),
     enabled: Boolean(token) && isOwner,
   });
@@ -198,7 +201,7 @@ export default function BudgetsPage() {
       amount: number;
     }) => createBudget(token!, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: gearboxKeys.budgets.all });
     },
   });
 
@@ -216,16 +219,16 @@ export default function BudgetsPage() {
       };
     }) => updateBudget(token!, id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: gearboxKeys.budgets.all });
     },
   });
 
   const approveBudgetMutation = useMutation({
     mutationFn: ({ id, assignedToId }: { id: string; assignedToId: string }) =>
-      acceptBudget(token!, id, { assignedToId }),
+      acceptBudget(token!, id, { assignedToId, confirm: true }),
     onSuccess: ({ service }) => {
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: gearboxKeys.budgets.all });
+      queryClient.invalidateQueries({ queryKey: gearboxKeys.services.all });
       toast({
         title: t("budgets.toasts.approveTitle"),
         description: t("budgets.toasts.approveDescription", { id: service.id }),
@@ -254,7 +257,7 @@ export default function BudgetsPage() {
   const denyBudgetMutation = useMutation({
     mutationFn: (id: string) => rejectBudget(token!, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: gearboxKeys.budgets.all });
       toast({
         title: t("budgets.toasts.rejectTitle"),
         description: t("budgets.toasts.rejectDescription"),
@@ -272,10 +275,10 @@ export default function BudgetsPage() {
     },
   });
 
-  const clients = clientsQuery.data?.data;
-  const cars = carsQuery.data?.data;
+  const clients = clientsQuery.data?.list;
+  const cars = carsQuery.data?.list;
   const mechanics = mechanicsQuery.data?.data;
-  const budgets = budgetsQuery.data?.data;
+  const budgets = budgetsQuery.data?.list;
 
   const safeClients = clients ?? EMPTY_CLIENTS;
   const safeCars = cars ?? EMPTY_CARS;
@@ -327,15 +330,34 @@ export default function BudgetsPage() {
     return map;
   }, [safeMechanics, user]);
 
+  const isBudgetOwnedByUser = useCallback(
+    (budget: Budget) => {
+      if (isOwner) return true;
+      const mechanicId = user?.id;
+      if (!mechanicId) return false;
+      return (
+        budget.userId === mechanicId ||
+        budget.user?.id === mechanicId ||
+        budget.updatedBy?.id === mechanicId ||
+        budget.createdById === mechanicId ||
+        budget.createdBy?.id === mechanicId
+      );
+    },
+    [isOwner, user?.id]
+  );
+
   const filteredBudgets = useMemo(() => {
-    const budgetList = budgets ?? EMPTY_BUDGETS;
+    const budgetList = budgetsQuery.data
+      ? isOwner
+        ? budgets ?? EMPTY_BUDGETS
+        : (budgets ?? EMPTY_BUDGETS).filter(isBudgetOwnedByUser)
+      : EMPTY_BUDGETS;
     const term = searchTerm.trim().toLowerCase();
     const fromDate = createdFrom ? new Date(createdFrom) : null;
     const toDate = createdTo ? new Date(createdTo) : null;
 
     const filtered = budgetList.filter((budget) => {
-      if (statusFilter !== "todos" && budget.status !== statusFilter)
-        return false;
+      if (statusFilter !== "todos" && budget.status !== statusFilter) return false;
       if (fromDate || toDate) {
         const createdAt = budget.createdAt ? new Date(budget.createdAt) : null;
         if (!createdAt) return false;
@@ -364,6 +386,8 @@ export default function BudgetsPage() {
     });
   }, [
     budgets,
+    budgetsQuery.data,
+    isBudgetOwnedByUser,
     searchTerm,
     clientMap,
     carMap,
@@ -454,19 +478,34 @@ export default function BudgetsPage() {
       openApprovalDialog(budget);
       return;
     }
-    if (!user) return;
-
+    if (!user || !isBudgetOwnedByUser(budget)) {
+      toast({
+        title: t("budgets.toasts.approveError"),
+        description: t("budgets.messages.noPermission"),
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await approveBudgetMutation.mutateAsync({
         id: budget.id,
         assignedToId: user.id,
       });
     } catch {
-      /* toast is handled by mutation */
+      /* toast handled by mutation */
     }
   };
 
   const handleDenyBudget = async (id: string) => {
+    const budget = budgets?.find((item) => item.id === id);
+    if (!isOwner && (!budget || !isBudgetOwnedByUser(budget))) {
+      toast({
+        title: t("budgets.toasts.rejectError"),
+        description: t("budgets.messages.noPermission"),
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await denyBudgetMutation.mutateAsync(id);
     } catch {
@@ -477,7 +516,11 @@ export default function BudgetsPage() {
   const renderBudgetCards = () => {
     if (budgetsQuery.isLoading) {
       return (
-        <div className="flex items-center gap-3 text-muted-foreground py-10">
+        <div
+          className="flex items-center gap-3 text-muted-foreground py-10"
+          role="status"
+          aria-live="polite"
+        >
           <Loader2 className="w-4 h-4 animate-spin" />
           {t("charts.placeholder.loading")}
         </div>
@@ -529,7 +572,8 @@ export default function BudgetsPage() {
             const denying =
               denyBudgetMutation.variables === budget.id &&
               denyBudgetMutation.isPending;
-            const canEditBudget = isOwner || budget.userId === user?.id;
+            const isBudgetOwner = isBudgetOwnedByUser(budget);
+            const canEditBudget = isBudgetOwner;
             const lastUpdatedName = budget.updatedBy?.nome ?? "—";
             const assignedMechanicId = getAssignedMechanicId(budget);
             const assignedMechanicLabel =
@@ -538,13 +582,15 @@ export default function BudgetsPage() {
                   assignedMechanicId.slice(0, 8)
                 : "—";
             const hasActiveMechanics = activeMechanics.length > 0;
-            const canManageBudget =
-              isOwner || (isMechanic && budget.userId === user?.id);
+            const canManageBudget = isBudgetOwner;
             const isOpenForApproval = budget.status === "aberto";
             const approveDisabled =
               !isOpenForApproval ||
               approving ||
-              (isOwner && !hasActiveMechanics);
+              (isOwner && !hasActiveMechanics) ||
+              (!isOwner && !isBudgetOwner);
+            const isAssignedToAnother =
+              !isOwner && user && budget.userId && budget.userId !== user.id;
             const estimatedDays =
               budget.prazoEstimadoDias !== undefined &&
               budget.prazoEstimadoDias !== null &&
@@ -641,6 +687,13 @@ export default function BudgetsPage() {
                         )}
                       </div>
                     )}
+                    {isAssignedToAnother && (
+                      <p className="text-xs text-warning">
+                        {t("budgets.messages.assignedToOther", {
+                          defaultValue: "Atribuído para outro mecânico",
+                        })}
+                      </p>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
                       {canEditBudget ? (
                         <BudgetFormDialog
@@ -656,7 +709,9 @@ export default function BudgetsPage() {
                               budget.prazoEstimadoDias ?? undefined,
                           }}
                           onSubmit={(values) =>
-                            handleEditBudget(budget.id, values)
+                            requestConfirm("edit", () =>
+                              handleEditBudget(budget.id, values)
+                            )
                           }
                           renderTrigger={({ open, disabled }) => (
                             <Button
@@ -672,7 +727,12 @@ export default function BudgetsPage() {
                         />
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          {t("budgets.messages.noPermission")}
+                          {isAssignedToAnother
+                            ? t("budgets.messages.assignedEditBlocked", {
+                                defaultValue:
+                                  "Este orçamento foi delegado a outro mecânico pelo administrador.",
+                              })
+                            : t("budgets.messages.noPermission")}
                         </p>
                       )}
                       {canManageBudget && (
@@ -682,7 +742,11 @@ export default function BudgetsPage() {
                             variant="outline"
                             className="border-success/30 bg-success-light text-success hover:bg-success-light/80"
                             disabled={approveDisabled}
-                            onClick={() => handleApproveBudget(budget)}
+                            onClick={() =>
+                              requestConfirm("approve", () =>
+                                handleApproveBudget(budget)
+                              )
+                            }
                           >
                             {approving
                               ? t("budgets.toasts.approveTitle")
@@ -693,11 +757,17 @@ export default function BudgetsPage() {
                             variant="outline"
                             className="border-destructive/30 bg-destructive-light text-destructive hover:bg-destructive-light/80"
                             disabled={budget.status !== "aberto" || denying}
-                            onClick={() => handleDenyBudget(budget.id)}
+                            onClick={() =>
+                              requestConfirm("cancel", () =>
+                                handleDenyBudget(budget.id)
+                              )
+                            }
                           >
                             {denying
                               ? t("budgets.toasts.rejectTitle")
-                              : t("common.actions.delete")}
+                              : t("budgets.status.cancelar", {
+                                  defaultValue: "Cancelar",
+                                })}
                           </Button>
                         </>
                       )}
@@ -756,6 +826,28 @@ export default function BudgetsPage() {
     dialogApproving ||
     !dialogAssignedMechanicId ||
     activeMechanics.length === 0;
+
+  const confirmDialogTitle: Record<"edit" | "approve" | "cancel", string> = {
+    edit: t("common.actions.edit"),
+    approve: t("common.actions.confirm"),
+    cancel: t("budgets.status.cancelar", { defaultValue: "Cancelar" }),
+  };
+
+  const confirmDialogMessage: Record<"edit" | "approve" | "cancel", string> = {
+    edit: t("budgets.messages.confirmEdit"),
+    approve: t("budgets.messages.confirmApprove"),
+    cancel: t("budgets.messages.confirmCancel"),
+  };
+
+  const requestConfirm = (
+    action: "edit" | "approve" | "cancel",
+    proceed: () => Promise<void> | void
+  ) =>
+    new Promise<void>((resolve, reject) => {
+      confirmDialogActionRef.current = null;
+      confirmDialogSettledRef.current = false;
+      setConfirmDialog({ action, proceed, resolve, reject });
+    });
 
   return (
     <>
@@ -919,6 +1011,74 @@ export default function BudgetsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={Boolean(confirmDialog)}
+        onOpenChange={(open) => {
+          if (open) {
+            confirmDialogActionRef.current = null;
+            confirmDialogSettledRef.current = false;
+            return;
+          }
+          if (!confirmDialog || confirmDialogSettledRef.current) return;
+
+          if (confirmDialogActionRef.current === "confirm") return;
+          if (confirmDialogActionRef.current === "cancel") return;
+
+          confirmDialog?.reject?.(new Error("cancelled"));
+          confirmDialogSettledRef.current = true;
+          setConfirmDialog(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDialog
+                ? confirmDialogTitle[confirmDialog.action]
+                : t("common.actions.confirm")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDialog
+                ? confirmDialogMessage[confirmDialog.action]
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => {
+                  if (!confirmDialog) return;
+                  confirmDialogActionRef.current = "cancel";
+                  confirmDialogSettledRef.current = true;
+                  confirmDialog.reject?.(new Error("cancelled"));
+                  setConfirmDialog(null);
+                  confirmDialogActionRef.current = null;
+                }}
+              >
+                {t("common.actions.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (!confirmDialog) return;
+                  confirmDialogActionRef.current = "confirm";
+                  try {
+                    await confirmDialog.proceed();
+                    confirmDialog.resolve?.();
+                    confirmDialogSettledRef.current = true;
+                  } catch (error) {
+                    confirmDialog.reject?.(error);
+                    confirmDialogActionRef.current = null;
+                    confirmDialogSettledRef.current = true;
+                    return;
+                  }
+                  setConfirmDialog(null);
+                  confirmDialogActionRef.current = null;
+                }}
+              >
+                {t("common.actions.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

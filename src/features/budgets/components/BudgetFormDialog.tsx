@@ -94,17 +94,29 @@ export function BudgetFormDialog({
         prazoEstimadoDias: form.prazoEstimadoDias ? Number(form.prazoEstimadoDias) : null,
       });
       toast({
-        title: mode === 'edit' ? t('budgets.toasts.approveTitle') : t('budgets.title'),
+        title:
+          mode === 'edit'
+            ? t('budgets.toasts.updateTitle', { defaultValue: 'Orçamento atualizado' })
+            : t('budgets.title'),
         description:
           mode === 'edit'
-            ? t('budgets.subtitle')
+            ? t('budgets.toasts.updateDescription', { defaultValue: 'Alterações salvas com sucesso.' })
             : t('budgets.subtitle'),
       });
       closeAndReset();
     } catch (error: unknown) {
+      if (error instanceof Error && error.message === 'cancelled') {
+        return;
+      }
       toast({
-        title: t('budgets.toasts.approveError'),
-        description: error instanceof Error ? error.message : t('budgets.toasts.defaultError'),
+        title:
+          mode === 'edit'
+            ? t('budgets.toasts.updateError', { defaultValue: 'Não foi possível salvar o orçamento' })
+            : t('budgets.toasts.approveError'),
+        description:
+          error instanceof Error
+            ? error.message
+            : t('budgets.toasts.defaultError'),
         variant: 'destructive',
       });
     } finally {

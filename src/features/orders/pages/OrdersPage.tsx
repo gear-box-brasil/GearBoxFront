@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  Plus,
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -13,13 +12,8 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  listServices,
-  listClients,
-  listCars,
-  updateService,
-} from "@/services/gearbox";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateService } from "@/services/gearbox";
 import type { ServiceStatus } from "@/types/api";
 import { PageHeader } from "@/components/PageHeader";
 import { SearchInput } from "@/components/SearchInput";
@@ -51,6 +45,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
+import { useOrders } from "@/hooks/useOrders";
+import { gearboxKeys } from "@/lib/queryKeys";
 
 const statusConfig = (
   t: (key: string) => string
@@ -182,22 +178,9 @@ export default function Ordens() {
   const { t } = useTranslation();
   const statusLabels = statusConfig(t);
 
-  const servicesQuery = useQuery({
-    queryKey: ["services", token, page],
-    queryFn: () => listServices(token!, { page, perPage: 10 }),
-    enabled: Boolean(token),
-  });
-
-  const clientsQuery = useQuery({
-    queryKey: ["clients", token, "map"],
-    queryFn: () => listClients(token!, { page: 1, perPage: 100 }),
-    enabled: Boolean(token),
-  });
-
-  const carsQuery = useQuery({
-    queryKey: ["cars", token, "map"],
-    queryFn: () => listCars(token!, { page: 1, perPage: 100 }),
-    enabled: Boolean(token),
+  const { servicesQuery, clientsQuery, carsQuery, clientMap, carMap } = useOrders({
+    page,
+    perPage: 10,
   });
 
   const updateStatusMutation = useMutation({
@@ -222,7 +205,7 @@ export default function Ordens() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: gearboxKeys.services.all });
       toast({
         title: t("orders.toasts.statusUpdated"),
         description: t("orders.toasts.statusSynced"),
@@ -259,18 +242,7 @@ export default function Ordens() {
     closeStatusDialog();
   };
 
-  const clientMap = useMemo(() => {
-    const entries =
-      clientsQuery.data?.data?.map((client) => [client.id, client.nome]) ?? [];
-    return new Map(entries);
-  }, [clientsQuery.data]);
-
-  const carMap = useMemo(() => {
-    const entries = carsQuery.data?.data?.map((car) => [car.id, car]) ?? [];
-    return new Map(entries);
-  }, [carsQuery.data]);
-
-  const services = servicesQuery.data?.data ?? [];
+  const services = servicesQuery.data?.list ?? [];
   const getDateIfValid = (value?: string | null) => {
     if (!value) return null;
     const parsed = new Date(value);
@@ -345,12 +317,21 @@ export default function Ordens() {
     return !isSameDay(dataPrevista, base);
   };
 
+  const allowedServices = useMemo(() => {
+    if (isOwner) return services;
+    const mechanicId = user?.id;
+    if (!mechanicId) return [];
+    return services.filter(
+      (service) => service.userId === mechanicId || service.assignedToId === mechanicId
+    );
+  }, [isOwner, services, user?.id]);
+
   const filteredServices = useMemo(() => {
     const term = searchTerm.toLowerCase();
     const fromDate = createdFrom ? new Date(createdFrom) : null;
     const toDate = createdTo ? new Date(createdTo) : null;
 
-    const filtered = services.filter((service) => {
+    const filtered = allowedServices.filter((service) => {
       if (statusFilter !== "todos" && service.status !== statusFilter)
         return false;
       if (fromDate || toDate) {
@@ -381,7 +362,7 @@ export default function Ordens() {
       return bDate - aDate;
     });
   }, [
-    services,
+    allowedServices,
     searchTerm,
     clientMap,
     carMap,
@@ -464,7 +445,11 @@ export default function Ordens() {
       </div>
 
       {servicesQuery.isLoading ? (
-        <div className="flex items-center gap-3 text-muted-foreground">
+        <div
+          className="flex items-center gap-3 text-muted-foreground"
+          role="status"
+          aria-live="polite"
+        >
           <Loader2 className="w-4 h-4 animate-spin" />
           {t("dashboardGeneral.recentOrdersLoading")}
         </div>
@@ -490,7 +475,11 @@ export default function Ordens() {
               const total = currencyFormat.format(
                 Number(service.totalValue) || 0
               );
-              const canUpdateService = isOwner || service.userId === user?.id;
+              const canUpdateService =
+                isOwner ||
+                service.userId === user?.id ||
+                service.assignedToId === user?.id;
+              const canManageDeadline = canUpdateService;
               return (
                 <Card
                   key={service.id}
@@ -695,6 +684,7 @@ export default function Ordens() {
                               setExtendDays("");
                               setExtendDate("");
                             }}
+                            disabled={!canManageDeadline}
                           >
                             <CalendarClock className="h-4 w-4" />
                             {t("orders.deadline.extend")}

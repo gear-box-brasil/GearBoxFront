@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -17,13 +18,6 @@ import {
   ListChecks,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import {
-  listServices,
-  listClients,
-  listCars,
-  listBudgets,
-} from "@/services/gearbox";
 import type { ServiceStatus, Service, Budget, BudgetStatus } from "@/types/api";
 import { useTranslation } from "react-i18next";
 import {
@@ -32,7 +26,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/shared/components/ui/dialog";
+import { useServices } from "@/hooks/useServices";
+import { useClients } from "@/hooks/useClients";
+import { useCars } from "@/hooks/useCars";
+import { useBudgets } from "@/hooks/useBudgets";
 
 type ExtendedService = Service & {
   dataPrevista?: string | null;
@@ -180,44 +179,164 @@ const budgetStatusLabel = (
   return mapping[status] ?? status;
 };
 
+const RecentOrderItem = ({
+  order,
+  statusLabels,
+  isDelayed,
+  dueDate,
+  responsibleName,
+  car,
+  clientName,
+  priorityLabel,
+  t,
+}: {
+  order: ExtendedService;
+  statusLabels: ReturnType<typeof statusConfig>;
+  isDelayed: boolean;
+  dueDate: Date | null;
+  responsibleName: string;
+  car: any;
+  clientName: string;
+  priorityLabel: string | null;
+  t: (key: string, options?: any) => string;
+}) => {
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+  const StatusIcon = statusLabels[order.status].icon;
+  const description = order.description;
+  const shouldTruncate = description && description.length > 150;
+
+  return (
+    <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+      <div className="flex-1 space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-foreground">{order.id}</span>
+          <Badge
+            className={cn(
+              "gap-1 text-xs font-semibold border border-transparent",
+              statusLabels[order.status].className
+            )}
+          >
+            <StatusIcon
+              className={cn("w-3 h-3", statusLabels[order.status].iconClass)}
+            />
+            {statusLabels[order.status].label}
+          </Badge>
+          {isDelayed && (
+            <Badge variant="destructive" className="text-xs">
+              {t("dashboardGeneral.recentOrders.overdue")}
+            </Badge>
+          )}
+          {priorityLabel && (
+            <Badge variant="secondary" className="text-xs">
+              {t("dashboardGeneral.labels.priority")}: {priorityLabel}
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-foreground font-medium">{clientName}</p>
+        <p className="text-xs text-muted-foreground">
+          {car
+            ? `${car.marca} ${car.modelo} · ${car.placa}`
+            : t("dashboardGeneral.recentOrders.unknownVehicle")}
+        </p>
+
+        <p
+          className={cn(
+            "text-sm text-muted-foreground whitespace-pre-wrap break-words",
+            shouldTruncate && "line-clamp-2"
+          )}
+        >
+          {description || t("dashboardGeneral.recentOrders.noDescription")}
+        </p>
+        {shouldTruncate && (
+          <>
+            <Button
+              variant="link"
+              className="h-auto p-0 text-xs mt-1 text-primary font-semibold"
+              onClick={() => setIsDescriptionOpen(true)}
+            >
+              Ver mais
+            </Button>
+            <Dialog
+              open={isDescriptionOpen}
+              onOpenChange={setIsDescriptionOpen}
+            >
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {t("dashboardGeneral.detailModal.title")}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto pr-2">
+                  <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                    {description}
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button onClick={() => setIsDescriptionOpen(false)}>
+                    {t("common.actions.close") || "Fechar"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
+          <span>
+            {t("dashboardGeneral.recentOrders.mechanic")}:{" "}
+            <span className="font-semibold text-foreground">
+              {responsibleName}
+            </span>
+          </span>
+          <span>
+            {t("dashboardGeneral.recentOrders.forecast")}:{" "}
+            {dueDate
+              ? dueDate.toLocaleDateString("pt-BR")
+              : t("dashboardGeneral.recentOrders.noForecast")}
+          </span>
+          <span>
+            {t("dashboardGeneral.recentOrders.createdAt")}:{" "}
+            {order.createdAt
+              ? new Date(order.createdAt).toLocaleDateString("pt-BR")
+              : "-"}
+          </span>
+        </div>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-semibold text-foreground">
+          {order.totalValue
+            ? currencyFormat.format(Number(order.totalValue))
+            : "R$ 0,00"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t("dashboardGeneral.recentOrders.updatedAt")}{" "}
+          {order.updatedAt
+            ? new Date(order.updatedAt).toLocaleDateString("pt-BR")
+            : "-"}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 export default function Dashboard() {
-  const { token, user, isOwner } = useAuth();
+  const { user, isOwner } = useAuth();
   const { t } = useTranslation();
   const statusLabels = statusConfig(t);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<ExtendedService | null>(
-    null
-  );
+  const [selectedService, setSelectedService] =
+    useState<ExtendedService | null>(null);
 
-  const servicesQuery = useQuery({
-    queryKey: ["services", token, "dashboard"],
-    queryFn: () => listServices(token!, { page: 1, perPage: 50 }),
-    enabled: Boolean(token),
-  });
+  const servicesQuery = useServices({ page: 1, perPage: 50 });
+  const budgetsQuery = useBudgets({ page: 1, perPage: 50 });
+  const clientsForMapQuery = useClients({ page: 1, perPage: 200 });
+  const carsForMapQuery = useCars({ page: 1, perPage: 200 });
 
-  const budgetsQuery = useQuery({
-    queryKey: ["budgets", token, "dashboard"],
-    queryFn: () => listBudgets(token!, { page: 1, perPage: 50 }),
-    enabled: Boolean(token),
-  });
-
-  const clientsForMapQuery = useQuery({
-    queryKey: ["clients", token, "dashboard-map"],
-    queryFn: () => listClients(token!, { page: 1, perPage: 200 }),
-    enabled: Boolean(token),
-  });
-
-  const carsForMapQuery = useQuery({
-    queryKey: ["cars", token, "dashboard-map"],
-    queryFn: () => listCars(token!, { page: 1, perPage: 200 }),
-    enabled: Boolean(token),
-  });
-
-  const services = (servicesQuery.data?.data ?? []) as ExtendedService[];
-  const budgets = (budgetsQuery.data?.data ?? []) as Budget[];
+  const services = (servicesQuery.data?.list ?? []) as ExtendedService[];
+  const budgets = (budgetsQuery.data?.list ?? []) as Budget[];
   const clientMap = useMemo(() => {
     const entries =
-      clientsForMapQuery.data?.data?.map((client) => [
+      clientsForMapQuery.data?.list?.map((client) => [
         client.id,
         client.nome,
       ]) ?? [];
@@ -226,7 +345,7 @@ export default function Dashboard() {
 
   const carMap = useMemo(() => {
     const entries =
-      carsForMapQuery.data?.data?.map((car) => [car.id, car]) ?? [];
+      carsForMapQuery.data?.list?.map((car) => [car.id, car]) ?? [];
     return new Map(entries);
   }, [carsForMapQuery.data]);
 
@@ -236,9 +355,7 @@ export default function Dashboard() {
     if (!mechanicId) return [];
     return services.filter(
       (service) =>
-        service.userId === mechanicId ||
-        service.assignedToId === mechanicId ||
-        service.budget?.userId === mechanicId
+        service.userId === mechanicId || service.assignedToId === mechanicId
     );
   }, [isOwner, services, user?.id]);
 
@@ -446,7 +563,11 @@ export default function Dashboard() {
       </div>
 
       {loadingDashboard ? (
-        <div className="flex items-center gap-3 text-muted-foreground mb-8">
+        <div
+          className="flex items-center gap-3 text-muted-foreground mb-8"
+          role="status"
+          aria-live="polite"
+        >
           <Loader2 className="w-4 h-4 animate-spin" />
           {t("dashboardGeneral.loading")}
         </div>
@@ -503,7 +624,10 @@ export default function Dashboard() {
                       {alert.value}
                     </p>
                   </div>
-                  <Badge variant={alert.value ? "destructive" : "secondary"}>
+                  <Badge
+                    variant={alert.value ? "destructive" : "secondary"}
+                    className="whitespace-nowrap"
+                  >
                     {alert.value
                       ? t("dashboardGeneral.alerts.actionRequired")
                       : t("dashboardGeneral.alerts.noIssues")}
@@ -554,8 +678,11 @@ export default function Dashboard() {
                       >
                         <div className="flex items-center gap-2">
                           <ListChecks className="w-3 h-3 text-primary" />
-                          <span className="text-foreground font-semibold">
-                            {task.id}
+                          <span
+                            className="text-foreground font-semibold"
+                            title={task.id}
+                          >
+                            #{task.id.substring(0, 8)}
                           </span>
                         </div>
                         <span className="truncate">
@@ -584,7 +711,11 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           {servicesQuery.isLoading ? (
-            <div className="flex items-center gap-3 text-muted-foreground">
+            <div
+              className="flex items-center gap-3 text-muted-foreground"
+              role="status"
+              aria-live="polite"
+            >
               <Loader2 className="w-4 h-4 animate-spin" />
               {t("dashboardGeneral.recentOrdersLoading")}
             </div>
@@ -597,7 +728,6 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-4">
               {recentOrders.map((order) => {
-                const StatusIcon = statusLabels[order.status].icon;
                 const isDelayed = isServiceOverdue(order);
                 const dueDate = getServiceForecastDate(order);
                 const responsibleName =
@@ -611,91 +741,18 @@ export default function Dashboard() {
                   t("dashboardGeneral.recentOrders.unknownClient");
                 const priorityLabel = formatPriority(order.priority, t);
                 return (
-                  <div
+                  <RecentOrderItem
                     key={order.id}
-                    className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-foreground">
-                          {order.id}
-                        </span>
-                        <Badge
-                          className={cn(
-                            "gap-1 text-xs font-semibold border border-transparent",
-                            statusLabels[order.status].className
-                          )}
-                        >
-                          <StatusIcon
-                            className={cn(
-                              "w-3 h-3",
-                              statusLabels[order.status].iconClass
-                            )}
-                          />
-                          {statusLabels[order.status].label}
-                        </Badge>
-                        {isDelayed && (
-                          <Badge variant="destructive" className="text-xs">
-                            {t("dashboardGeneral.recentOrders.overdue")}
-                          </Badge>
-                        )}
-                        {priorityLabel && (
-                          <Badge variant="secondary" className="text-xs">
-                            {t("dashboardGeneral.labels.priority")}:{" "}
-                            {priorityLabel}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-foreground font-medium">
-                        {clientName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {car
-                          ? `${car.marca} ${car.modelo} · ${car.placa}`
-                          : t("dashboardGeneral.recentOrders.unknownVehicle")}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {order.description ??
-                          t("dashboardGeneral.recentOrders.noDescription")}
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
-                        <span>
-                          {t("dashboardGeneral.recentOrders.mechanic")}:{" "}
-                          <span className="font-semibold text-foreground">
-                            {responsibleName}
-                          </span>
-                        </span>
-                        <span>
-                          {t("dashboardGeneral.recentOrders.forecast")}:{" "}
-                          {dueDate
-                            ? dueDate.toLocaleDateString("pt-BR")
-                            : t("dashboardGeneral.recentOrders.noForecast")}
-                        </span>
-                        <span>
-                          {t("dashboardGeneral.recentOrders.createdAt")}:{" "}
-                          {order.createdAt
-                            ? new Date(order.createdAt).toLocaleDateString(
-                                "pt-BR"
-                              )
-                            : t("dashboardGeneral.recentOrders.noForecast")}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-foreground">
-                        {currencyFormat.format(Number(order.totalValue) || 0)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {order.updatedAt
-                          ? t("dashboardGeneral.recentOrders.updatedAt", {
-                              date: new Date(
-                                order.updatedAt
-                              ).toLocaleDateString("pt-BR"),
-                            })
-                          : ""}
-                      </p>
-                    </div>
-                  </div>
+                    order={order}
+                    statusLabels={statusLabels}
+                    isDelayed={isDelayed}
+                    dueDate={dueDate}
+                    responsibleName={responsibleName}
+                    car={car}
+                    clientName={clientName}
+                    priorityLabel={priorityLabel}
+                    t={t}
+                  />
                 );
               })}
             </div>
@@ -729,10 +786,7 @@ export default function Dashboard() {
                 selectedService.budget ??
                 budgets.find((item) => item.id === selectedService.budgetId);
               const dueDate = getServiceForecastDate(selectedService);
-              const priorityLabel = formatPriority(
-                selectedService.priority,
-                t
-              );
+              const priorityLabel = formatPriority(selectedService.priority, t);
               const responsibleName =
                 selectedService.assignedTo?.nome ??
                 selectedService.user?.nome ??
