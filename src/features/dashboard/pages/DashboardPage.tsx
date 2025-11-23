@@ -683,10 +683,9 @@ export default function Dashboard() {
                 {group.items.length ? (
                   <div className="space-y-2">
                     {group.items.slice(0, 4).map((task) => (
-                      <Tooltip delayDuration={0}>
+                      <Tooltip key={task.id} delayDuration={0}>
                         <TooltipTrigger asChild>
                           <button
-                            key={task.id}
                             type="button"
                             onClick={() => {
                               setSelectedService(task);

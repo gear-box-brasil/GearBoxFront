@@ -26,7 +26,9 @@ const App = () => {
         <AuthProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+          >
             <ThemeToggle className="fixed top-4 right-4 z-50" />
             <Routes>
               <Route path="/login" element={<LoginPage />} />
