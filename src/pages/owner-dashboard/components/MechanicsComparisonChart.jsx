@@ -129,19 +129,19 @@ export function MechanicsComparisonChart({
       1,
       ...data.map((item) => item.budgets ?? 0),
       averageProfile?.budgets ?? 0,
-      topPerformer?.budgets ?? 0,
+      topPerformer?.budgets ?? 0
     );
     const servicesMax = Math.max(
       1,
       ...data.map((item) => item.services ?? 0),
       averageProfile?.services ?? 0,
-      topPerformer?.services ?? 0,
+      topPerformer?.services ?? 0
     );
     const ticketMax = Math.max(
       1,
       ...data.map((item) => item.ticketAverage ?? 0),
       averageProfile?.ticketAverage ?? 0,
-      topPerformer?.ticketAverage ?? 0,
+      topPerformer?.ticketAverage ?? 0
     );
 
     const buildSeriesEntry = (item, index, customName) => {
@@ -184,16 +184,16 @@ export function MechanicsComparisonChart({
     };
 
     const seriesEntries = data.map((item, index) =>
-      buildSeriesEntry(item, index),
+      buildSeriesEntry(item, index)
     );
     if (averageProfile) {
       seriesEntries.push(
-        buildSeriesEntry(averageProfile, seriesEntries.length, "Média geral"),
+        buildSeriesEntry(averageProfile, seriesEntries.length, "Média geral")
       );
     }
     if (topPerformer) {
       seriesEntries.push(
-        buildSeriesEntry(topPerformer, seriesEntries.length, "Top performer"),
+        buildSeriesEntry(topPerformer, seriesEntries.length, "Top performer")
       );
     }
 
@@ -233,7 +233,7 @@ export function MechanicsComparisonChart({
           ]
             .map(
               (metric) =>
-                `<div>${metric.label}: <span class="font-semibold">${metric.value}</span></div>`,
+                `<div>${metric.label}: <span class="font-semibold">${metric.value}</span></div>`
             )
             .join("");
 
@@ -308,7 +308,7 @@ export function MechanicsComparisonChart({
               key={row.id ?? row.name}
               className={cn(
                 "p-4 border border-border/50",
-                selectedId && row.id === selectedId ? "bg-muted/30" : "",
+                selectedId && row.id === selectedId ? "bg-muted/30" : ""
               )}
               onClick={() => row.id && onSelect?.(row.id)}
             >

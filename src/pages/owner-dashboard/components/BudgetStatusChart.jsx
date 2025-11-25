@@ -66,7 +66,7 @@ export function BudgetStatusChart({
 
   const total = useMemo(
     () => data.reduce((sum, item) => sum + (item.value ?? 0), 0),
-    [data],
+    [data]
   );
   const hasData = total > 0;
 
@@ -88,7 +88,7 @@ export function BudgetStatusChart({
           return `<div class="text-xs font-semibold mb-1">${params.name}</div>
             <div class="text-xs leading-relaxed">
               <div>${params.value} ${t(
-                "navigation.budgets",
+                "navigation.budgets"
               ).toLowerCase()}</div>
               <div>${percent}% ${t("common.totalLabel").toLowerCase()}</div>
             </div>`;

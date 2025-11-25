@@ -116,7 +116,7 @@ export function ClientCarDialog({
       const details = await getFipeVehicleDetails(
         values.brandCode,
         values.modelCode,
-        values.yearCode,
+        values.yearCode
       );
       if (!details) {
         throw new Error(t("vehicles.subtitle"));
