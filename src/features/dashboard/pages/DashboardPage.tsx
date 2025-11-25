@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Wrench,
   Users,
@@ -92,11 +93,20 @@ const currencyFormat = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+const DEFAULT_PERIOD_DAYS = 30;
+
+const createDefaultDateRange = (): DateRange => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - (DEFAULT_PERIOD_DAYS - 1));
+  return { from: start, to: end };
+};
+
 const formatDateForApi = (date?: Date | null) =>
   date ? format(date, "yyyy-MM-dd") : undefined;
 
 const formatDateForLabel = (date?: Date | null) =>
-  date ? format(date, "dd/MM/yyyy") : "";
+  date ? format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "";
 
 const getDateIfValid = (value?: string | null) => {
   if (!value) return null;
@@ -353,7 +363,9 @@ export default function Dashboard() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedService, setSelectedService] =
     useState<ExtendedService | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() =>
+    createDefaultDateRange()
+  );
 
   const serviceFilters = useMemo(() => {
     const start = dateRange?.from ?? null;
@@ -386,9 +398,13 @@ export default function Dashboard() {
   const servicesQuery = useServices({
     page: 1,
     perPage: 50,
-    filters: !isOwner ? serviceFilters : undefined,
+    filters: serviceFilters,
   });
-  const budgetsQuery = useBudgets({ page: 1, perPage: 50 });
+  const budgetsQuery = useBudgets({
+    page: 1,
+    perPage: 50,
+    filters: serviceFilters,
+  });
   const clientsForMapQuery = useClients({ page: 1, perPage: 200 });
   const carsForMapQuery = useCars({ page: 1, perPage: 200 });
 
@@ -462,11 +478,7 @@ export default function Dashboard() {
       title: isOwner
         ? t("dashboardGeneral.stats.ordersOwner")
         : t("dashboardGeneral.stats.ordersUser"),
-      value:
-        (isOwner
-          ? servicesQuery.data?.meta.total
-          : visibleServices.length
-        )?.toString() ?? "—",
+      value: String(visibleServices.length),
       change: t("dashboardGeneral.stats.ordersChange", { count: openOrders }),
       icon: Wrench,
       color: "text-primary",
@@ -476,11 +488,7 @@ export default function Dashboard() {
       title: isOwner
         ? t("dashboardGeneral.stats.clientsOwner")
         : t("dashboardGeneral.stats.clientsUser"),
-      value:
-        (isOwner
-          ? clientsForMapQuery.data?.meta.total
-          : clientIds.size
-        )?.toString() ?? "—",
+      value: String(clientIds.size),
       change: t("dashboardGeneral.stats.clientsChange"),
       icon: Users,
       color: "text-accent",
@@ -490,11 +498,7 @@ export default function Dashboard() {
       title: isOwner
         ? t("dashboardGeneral.stats.vehiclesOwner")
         : t("dashboardGeneral.stats.vehiclesUser"),
-      value:
-        (isOwner
-          ? carsForMapQuery.data?.meta.total
-          : vehicleIds.size
-        )?.toString() ?? "—",
+      value: String(vehicleIds.size),
       change: t("dashboardGeneral.stats.vehiclesChange"),
       icon: Car,
       color: "text-success",
@@ -622,55 +626,54 @@ export default function Dashboard() {
             {t("dashboardGeneral.subtitle")}
           </p>
         </div>
-        {!isOwner && (
-          <div className="flex flex-col gap-2 text-sm">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("dashboardGeneral.periodFilter.label")}
-            </span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    aria-label={t("dashboardGeneral.periodFilter.label")}
-                    className={cn(
-                      "flex min-w-[250px] items-center justify-start gap-2 text-left font-normal",
-                      !hasActivePeriodFilter && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarRange className="h-4 w-4 text-primary" />
-                    <span>{selectedRangeLabel}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                    defaultMonth={dateRange?.from}
-                  />
-                </PopoverContent>
-              </Popover>
-              {hasActivePeriodFilter && (
+        <div className="flex flex-col gap-2 text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("dashboardGeneral.periodFilter.label")}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearDateRange}
-                  className="text-xs"
+                  variant="outline"
+                  aria-label={t("dashboardGeneral.periodFilter.label")}
+                  className={cn(
+                    "flex min-w-[250px] items-center justify-start gap-2 text-left font-normal",
+                    !hasActivePeriodFilter && "text-muted-foreground"
+                  )}
                 >
-                  {t("common.actions.clear")}
+                  <CalendarRange className="h-4 w-4 text-primary" />
+                  <span>{selectedRangeLabel}</span>
                 </Button>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("dashboardGeneral.periodFilter.helper")}
-            </p>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  defaultMonth={dateRange?.from ?? new Date()}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+            {hasActivePeriodFilter && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleClearDateRange}
+                className="text-xs"
+              >
+                {t("common.actions.clear")}
+              </Button>
+            )}
           </div>
-        )}
+          <p className="text-xs text-muted-foreground">
+            {t("dashboardGeneral.periodFilter.helper")}
+          </p>
+        </div>
       </div>
 
       {loadingDashboard ? (
@@ -1072,3 +1075,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+// Atualização: Filtro de período unificado (padrão 30 dias) com calendário em pt-BR aplicado a todos os perfis e KPIs/listas sincronizados ao intervalo selecionado.

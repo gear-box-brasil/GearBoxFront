@@ -9,12 +9,17 @@ type UseBudgetsParams = {
   page?: number;
   perPage?: number;
   enabled?: boolean;
+  filters?: {
+    startDate?: string | null;
+    endDate?: string | null;
+  };
 };
 
 export function useBudgets({
   page = 1,
   perPage = 10,
   enabled = true,
+  filters,
 }: UseBudgetsParams = {}) {
   const { token, isOwner, user } = useAuth();
   const scope = isOwner ? "owner" : "mine";
@@ -23,6 +28,8 @@ export function useBudgets({
     perPage,
     scope,
     userId: !isOwner ? user?.id : undefined,
+    startDate: filters?.startDate ?? undefined,
+    endDate: filters?.endDate ?? undefined,
   };
 
   return useQuery({
