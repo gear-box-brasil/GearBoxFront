@@ -13,6 +13,7 @@
       "cancel": "Cancel",
       "edit": "Edit",
       "delete": "Delete",
+      "clear": "Clear",
       "confirm": "Confirm",
       "close": "Close",
       "viewDetails": "View details",
@@ -336,6 +337,11 @@
     "title": "Dashboard",
     "subtitle": "Consolidated indicators for Gear Box",
     "loading": "Refreshing indicators...",
+    "periodFilter": {
+      "label": "Displayed period",
+      "placeholder": "All records",
+      "helper": "Choose any interval to filter the indicators and recent orders"
+    },
     "recentOrdersTitle": "Recent Work Orders",
     "recentOrdersLoading": "Fetching orders...",
     "recentOrdersError": "Error listing orders",

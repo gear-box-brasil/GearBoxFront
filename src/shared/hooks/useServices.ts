@@ -5,16 +5,23 @@ import { gearboxKeys } from "@/lib/queryKeys";
 import { QUERY_STALE_TIMES } from "@/config/query";
 import type { PaginatedMeta, Service } from "@/types/api";
 
+type ServiceFilters = {
+  startDate?: string | null;
+  endDate?: string | null;
+};
+
 type UseServicesParams = {
   page?: number;
   perPage?: number;
   enabled?: boolean;
+  filters?: ServiceFilters;
 };
 
 export function useServices({
   page = 1,
   perPage = 10,
   enabled = true,
+  filters,
 }: UseServicesParams = {}) {
   const { token, isOwner, user } = useAuth();
   const scope = isOwner ? "owner" : "mine";
@@ -24,6 +31,8 @@ export function useServices({
     scope,
     userId: !isOwner ? user?.id : undefined,
     assignedToId: !isOwner ? user?.id : undefined,
+    startDate: filters?.startDate ?? undefined,
+    endDate: filters?.endDate ?? undefined,
   };
 
   return useQuery({

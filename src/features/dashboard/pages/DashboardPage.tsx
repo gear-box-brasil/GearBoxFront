@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import {
   Wrench,
   Users,
@@ -16,6 +17,7 @@ import {
   Bell,
   CalendarCheck2,
   ListChecks,
+  CalendarRange,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ServiceStatus, Service, Budget, BudgetStatus } from "@/types/api";
@@ -29,10 +31,13 @@ import {
   DialogFooter,
 } from "@/shared/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useServices } from "@/hooks/useServices";
 import { useClients } from "@/hooks/useClients";
 import { useCars } from "@/hooks/useCars";
 import { useBudgets } from "@/hooks/useBudgets";
+import type { DateRange } from "react-day-picker";
 
 type ExtendedService = Service & {
   dataPrevista?: string | null;
@@ -86,6 +91,12 @@ const currencyFormat = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
+
+const formatDateForApi = (date?: Date | null) =>
+  date ? format(date, "yyyy-MM-dd") : undefined;
+
+const formatDateForLabel = (date?: Date | null) =>
+  date ? format(date, "dd/MM/yyyy") : "";
 
 const getDateIfValid = (value?: string | null) => {
   if (!value) return null;
@@ -342,8 +353,41 @@ export default function Dashboard() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedService, setSelectedService] =
     useState<ExtendedService | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const servicesQuery = useServices({ page: 1, perPage: 50 });
+  const serviceFilters = useMemo(() => {
+    const start = dateRange?.from ?? null;
+    const end = dateRange?.to ?? dateRange?.from ?? null;
+    if (!start && !end) return undefined;
+    return {
+      startDate: formatDateForApi(start),
+      endDate: formatDateForApi(end),
+    };
+  }, [dateRange]);
+
+  const hasActivePeriodFilter = Boolean(
+    serviceFilters?.startDate || serviceFilters?.endDate
+  );
+
+  const selectedRangeLabel = useMemo(() => {
+    if (dateRange?.from && dateRange?.to) {
+      return `${formatDateForLabel(dateRange.from)} - ${formatDateForLabel(
+        dateRange.to
+      )}`;
+    }
+    if (dateRange?.from) {
+      return formatDateForLabel(dateRange.from);
+    }
+    return t("dashboardGeneral.periodFilter.placeholder");
+  }, [dateRange, t]);
+
+  const handleClearDateRange = () => setDateRange(undefined);
+
+  const servicesQuery = useServices({
+    page: 1,
+    perPage: 50,
+    filters: !isOwner ? serviceFilters : undefined,
+  });
   const budgetsQuery = useBudgets({ page: 1, perPage: 50 });
   const clientsForMapQuery = useClients({ page: 1, perPage: 200 });
   const carsForMapQuery = useCars({ page: 1, perPage: 200 });
@@ -569,13 +613,64 @@ export default function Dashboard() {
 
   return (
     <div className="page-container">
-      <div className="mb-8">
-        <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">
-          {t("dashboardGeneral.title")}
-        </h1>
-        <p className="text-muted-foreground">
-          {t("dashboardGeneral.subtitle")}
-        </p>
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="heading-accent text-3xl font-bold text-foreground mb-2">
+            {t("dashboardGeneral.title")}
+          </h1>
+          <p className="text-muted-foreground">
+            {t("dashboardGeneral.subtitle")}
+          </p>
+        </div>
+        {!isOwner && (
+          <div className="flex flex-col gap-2 text-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("dashboardGeneral.periodFilter.label")}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={t("dashboardGeneral.periodFilter.label")}
+                    className={cn(
+                      "flex min-w-[250px] items-center justify-start gap-2 text-left font-normal",
+                      !hasActivePeriodFilter && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarRange className="h-4 w-4 text-primary" />
+                    <span>{selectedRangeLabel}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    defaultMonth={dateRange?.from}
+                  />
+                </PopoverContent>
+              </Popover>
+              {hasActivePeriodFilter && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearDateRange}
+                  className="text-xs"
+                >
+                  {t("common.actions.clear")}
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("dashboardGeneral.periodFilter.helper")}
+            </p>
+          </div>
+        )}
       </div>
 
       {loadingDashboard ? (

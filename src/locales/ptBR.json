@@ -13,6 +13,7 @@
       "cancel": "Cancelar",
       "edit": "Editar",
       "delete": "Excluir",
+      "clear": "Limpar",
       "confirm": "Confirmar",
       "close": "Fechar",
       "viewDetails": "Ver detalhes",
@@ -336,6 +337,11 @@
     "title": "Dashboard",
     "subtitle": "Indicadores consolidados da Gear Box",
     "loading": "Atualizando indicadores...",
+    "periodFilter": {
+      "label": "Período exibido",
+      "placeholder": "Todos os registros",
+      "helper": "Selecione qualquer intervalo para aplicar aos indicadores e às ordens recentes"
+    },
     "recentOrdersTitle": "Ordens de Serviço Recentes",
     "recentOrdersLoading": "Buscando ordens...",
     "recentOrdersError": "Erro ao listar ordens",
