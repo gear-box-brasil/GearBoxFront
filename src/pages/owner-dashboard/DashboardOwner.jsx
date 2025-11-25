@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -9,7 +9,9 @@ import {
   updateUser,
   deleteUser,
 } from "@/services/gearbox";
-import { Loader2 } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { Loader2, FileDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +19,6 @@ import { useTranslation } from "react-i18next";
 import { KpiCards } from "./components/KpiCards";
 import { MechanicsComparisonChart } from "./components/MechanicsComparisonChart";
 import { BudgetStatusChart } from "./components/BudgetStatusChart";
-import { MechanicDetailChart } from "./components/MechanicDetailChart";
 import { CreateUserModal } from "./components/CreateUserModal";
 import { UsersTable } from "./components/UsersTable";
 import { PageHeader } from "@/components/PageHeader";
@@ -30,6 +31,8 @@ const PERIOD_OPTIONS = [
   { value: "currentMonth", label: "Mês atual" },
   { value: "previousMonth", label: "Mês anterior" },
   { value: "year", label: "Ano" },
+  { value: "last5Years", label: "Últimos 5 anos" },
+  { value: "allTime", label: "Sempre" },
 ];
 
 export default function DashboardOwner() {
@@ -39,9 +42,13 @@ export default function DashboardOwner() {
   const [selectedMechanicId, setSelectedMechanicId] = useState(null);
   const [userSearch, setUserSearch] = useState("");
   const [deletingUserId, setDeletingUserId] = useState(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const { toast } = useToast();
   const isOwner = user?.role === "dono";
   const { t } = useTranslation();
+  const summaryRef = useRef(null);
+  const comparisonCardRef = useRef(null);
+  const statusCardRef = useRef(null);
 
   const usersQuery = useQuery({
     queryKey: ["users", token],
@@ -72,13 +79,31 @@ export default function DashboardOwner() {
   const budgets = budgetsQuery.data?.data ?? [];
   const services = servicesQuery.data?.data ?? [];
 
+  const earliestRecordDate = useMemo(() => {
+    const dateValues = [...budgets, ...services]
+      .map((item) => {
+        const value = item?.createdAt ?? item?.created_at;
+        if (!value) return null;
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      })
+      .filter(Boolean);
+    if (!dateValues.length) return null;
+    return new Date(
+      Math.min.apply(
+        null,
+        dateValues.map((date) => date.getTime())
+      )
+    );
+  }, [budgets, services]);
+
   const periodRange = useMemo(
-    () => getPeriodRange(selectedPeriod),
-    [selectedPeriod]
+    () => getPeriodRange(selectedPeriod, earliestRecordDate),
+    [selectedPeriod, earliestRecordDate]
   );
   const previousPeriodRange = useMemo(
-    () => getPreviousPeriodRange(selectedPeriod),
-    [selectedPeriod]
+    () => getPreviousPeriodRange(selectedPeriod, earliestRecordDate),
+    [selectedPeriod, earliestRecordDate]
   );
 
   const budgetsInPeriod = useMemo(
@@ -365,6 +390,118 @@ export default function DashboardOwner() {
     ];
   }, [budgetsInPeriod.length, statusData, t]);
 
+  const handleExportPdf = useCallback(async () => {
+    const sections = [
+      { ref: summaryRef, title: t("owner.report.sections.summary") },
+      { ref: comparisonCardRef, title: t("owner.report.sections.radar") },
+      { ref: statusCardRef, title: t("owner.report.sections.status") },
+    ];
+
+    if (sections.every((section) => !section.ref.current)) {
+      toast({
+        title: t("owner.report.errorTitle"),
+        description: t("owner.report.errors.noContent"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const pdf = new jsPDF("p", "mm", "a4");
+      const margin = 14;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const contentWidth = pageWidth - margin * 2;
+      let cursorY = margin;
+      const periodText =
+        periodLabel ?? t("owner.report.periodFallback", { value: selectedPeriod });
+      const emissionDate = new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "long",
+        timeStyle: "short",
+      }).format(new Date());
+
+      const logoDataUrl = await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const size = 128;
+          const canvas = document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          if (ctx) ctx.drawImage(img, 0, 0, size, size);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => resolve(null);
+        img.src = "/logo.svg";
+      });
+
+      if (logoDataUrl) {
+        pdf.addImage(logoDataUrl, "PNG", margin, cursorY, 20, 20);
+      }
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(16);
+      pdf.text("Gear Box", margin + 24, cursorY + 8);
+      pdf.setFontSize(13);
+      pdf.text(t("owner.report.title"), margin + 24, cursorY + 18);
+
+      cursorY += 30;
+      pdf.setFontSize(11);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`${t("owner.report.periodLabel")}: ${periodText}`, margin, cursorY);
+      cursorY += 7;
+      pdf.text(`${t("owner.report.generatedAt")}: ${emissionDate}`, margin, cursorY);
+      cursorY += 12;
+
+      for (const section of sections) {
+        if (!section.ref.current) continue;
+        const canvas = await html2canvas(section.ref.current, {
+          backgroundColor: "#f8fafc",
+          scale: 2,
+        });
+        const imgHeight = (canvas.height * contentWidth) / canvas.width;
+        if (cursorY + imgHeight > pageHeight - margin) {
+          pdf.addPage();
+          cursorY = margin;
+        }
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.text(section.title, margin, cursorY + 6);
+        cursorY += 10;
+        const imgData = canvas.toDataURL("image/png", 0.98);
+        pdf.addImage(imgData, "PNG", margin, cursorY, contentWidth, imgHeight);
+        cursorY += imgHeight + 10;
+      }
+
+      pdf.save(`gearbox-relatorio-${selectedPeriod}-${Date.now()}.pdf`);
+      toast({
+        title: t("owner.report.successTitle"),
+        description: t("owner.report.successMessage"),
+      });
+    } catch (error) {
+      toast({
+        title: t("owner.report.errorTitle"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("owner.report.errorMessage"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [
+    comparisonCardRef,
+    periodLabel,
+    selectedPeriod,
+    statusCardRef,
+    summaryRef,
+    t,
+    toast,
+  ]);
+
   const selectedMechanic =
     mechanics.find((mechanic) => mechanic.id === selectedMechanicId) ?? null;
 
@@ -517,7 +654,27 @@ export default function DashboardOwner() {
           align="start"
           className="gap-2"
         />
-        <CreateUserModal onSubmit={handleCreateUser} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button
+            variant="outline"
+            onClick={handleExportPdf}
+            disabled={isExportingPdf || isLoading}
+            className="gap-2"
+          >
+            {isExportingPdf ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t("owner.actions.exportingPdf")}
+              </>
+            ) : (
+              <>
+                <FileDown className="h-4 w-4" />
+                {t("owner.actions.exportPdf")}
+              </>
+            )}
+          </Button>
+          <CreateUserModal onSubmit={handleCreateUser} />
+        </div>
       </div>
 
       {isLoading ? (
@@ -531,35 +688,41 @@ export default function DashboardOwner() {
         />
       ) : (
         <>
-          <KpiCards metrics={metrics} />
+          <div ref={summaryRef}>
+            <KpiCards metrics={metrics} />
+          </div>
 
           <div className="grid grid-cols-1 gap-6">
-            <MechanicsComparisonChart
-              data={comparisonData}
-              loading={isLoading}
-              kpis={performanceKpis}
-              averageProfile={mechanicAverageProfile}
-              topPerformer={bestMechanic}
-              selectedId={selectedMechanicId}
-              onSelect={setSelectedMechanicId}
-              period={{
-                value: selectedPeriod,
-                label: periodLabel,
-                options: PERIOD_OPTIONS,
-                onChange: setSelectedPeriod,
-              }}
-            />
-            <BudgetStatusChart
-              data={statusData}
-              kpis={statusKpis}
-              loading={isLoading}
-              period={{
-                value: selectedPeriod,
-                label: periodLabel,
-                options: PERIOD_OPTIONS,
-                onChange: setSelectedPeriod,
-              }}
-            />
+            <div ref={comparisonCardRef}>
+              <MechanicsComparisonChart
+                data={comparisonData}
+                loading={isLoading}
+                kpis={performanceKpis}
+                averageProfile={mechanicAverageProfile}
+                topPerformer={bestMechanic}
+                selectedId={selectedMechanicId}
+                onSelect={setSelectedMechanicId}
+                period={{
+                  value: selectedPeriod,
+                  label: periodLabel,
+                  options: PERIOD_OPTIONS,
+                  onChange: setSelectedPeriod,
+                }}
+              />
+            </div>
+            <div ref={statusCardRef}>
+              <BudgetStatusChart
+                data={statusData}
+                kpis={statusKpis}
+                loading={isLoading}
+                period={{
+                  value: selectedPeriod,
+                  label: periodLabel,
+                  options: PERIOD_OPTIONS,
+                  onChange: setSelectedPeriod,
+                }}
+              />
+            </div>
           </div>
 
           <UsersTable
@@ -611,7 +774,7 @@ function formatPeriod(dateInput) {
   )}/${date.getFullYear()}`;
 }
 
-function getPeriodRange(value) {
+function getPeriodRange(value, earliestDate = null) {
   const now = new Date();
   const startOfDay = (date) => {
     const next = new Date(date);
@@ -648,13 +811,23 @@ function getPeriodRange(value) {
       const start = new Date(now.getFullYear(), 0, 1);
       return { start: startOfDay(start), end: endOfDay(now) };
     }
+    case "last5Years": {
+      const start = new Date(now);
+      start.setFullYear(now.getFullYear() - 5);
+      return { start: startOfDay(start), end: endOfDay(now) };
+    }
+    case "allTime": {
+      const start = earliestDate ? startOfDay(earliestDate) : null;
+      const end = endOfDay(now);
+      return start ? { start, end } : { start: null, end: null };
+    }
     default:
       return { start: null, end: null };
   }
 }
 
-function getPreviousPeriodRange(value) {
-  const current = getPeriodRange(value);
+function getPreviousPeriodRange(value, earliestDate = null) {
+  const current = getPeriodRange(value, earliestDate);
   if (!current.start || !current.end) return { start: null, end: null };
 
   const diff = current.end.getTime() - current.start.getTime();
@@ -720,3 +893,5 @@ function filterUsers(users, term) {
       user.email?.toLowerCase().includes(normalized)
   );
 }
+
+// Atualizações neste arquivo: novos períodos (5 anos/Sempre) com base na primeira data registrada e botão de exportação em PDF que captura cards, gráficos e tabela do painel executivo.

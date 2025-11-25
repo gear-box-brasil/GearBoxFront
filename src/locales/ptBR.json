@@ -83,6 +83,10 @@
       "title": "Dashboard do Administrador",
       "subtitle": "Visão consolidada de orçamentos, serviços e performance dos mecânicos."
     },
+    "actions": {
+      "exportPdf": "Exportar relatório em PDF",
+      "exportingPdf": "Gerando PDF..."
+    },
     "kpis": {
       "mechanics": "Total de Mecânicos",
       "budgets": "Orçamentos gerados",
@@ -147,6 +151,24 @@
     },
     "table": {
       "mechanicSummary": "Detalhamento por Mecânico"
+    },
+    "report": {
+      "title": "Relatório Executivo",
+      "periodLabel": "Período",
+      "periodFallback": "Período selecionado ({{value}})",
+      "generatedAt": "Emitido em",
+      "successTitle": "Relatório gerado",
+      "successMessage": "O PDF foi criado com sucesso.",
+      "errorTitle": "Erro ao gerar relatório",
+      "errorMessage": "Não foi possível gerar o PDF. Tente novamente.",
+      "errors": {
+        "noContent": "Nenhum conteúdo disponível para exportação."
+      },
+      "sections": {
+        "summary": "Cards de desempenho",
+        "radar": "Comparativo de mecânicos",
+        "status": "Status dos orçamentos"
+      }
     }
   },
   "charts": {

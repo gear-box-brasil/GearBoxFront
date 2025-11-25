@@ -83,6 +83,10 @@
       "title": "Administrator Dashboard",
       "subtitle": "Consolidated view of budgets, services, and mechanics performance."
     },
+    "actions": {
+      "exportPdf": "Export executive report (PDF)",
+      "exportingPdf": "Generating PDF..."
+    },
     "kpis": {
       "mechanics": "Total Mechanics",
       "budgets": "Budgets Created",
@@ -147,6 +151,24 @@
     },
     "table": {
       "mechanicSummary": "Mechanic breakdown"
+    },
+    "report": {
+      "title": "Executive Report",
+      "periodLabel": "Period",
+      "periodFallback": "Selected period ({{value}})",
+      "generatedAt": "Generated on",
+      "successTitle": "Report ready",
+      "successMessage": "The PDF was created successfully.",
+      "errorTitle": "Could not generate report",
+      "errorMessage": "Something went wrong while creating the PDF.",
+      "errors": {
+        "noContent": "No dashboard content available to export."
+      },
+      "sections": {
+        "summary": "Performance cards",
+        "radar": "Mechanics comparison",
+        "status": "Budget status"
+      }
     }
   },
   "charts": {
