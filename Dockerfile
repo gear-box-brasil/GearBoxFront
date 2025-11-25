@@ -16,7 +16,9 @@ FROM nginx:stable-alpine AS runner
 
 # Remove default config and add our SPA-aware configuration
 RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+ENV PORT=80
 
 # Copy compiled assets from the builder image
 COPY --from=builder /app/dist /usr/share/nginx/html
