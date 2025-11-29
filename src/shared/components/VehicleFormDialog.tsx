@@ -56,6 +56,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Client } from "@/types/api";
 import { createCar } from "@/services/gearbox";
 import { useTranslation } from "react-i18next";
+import { ApiError } from "@/lib/api";
 
 const vehicleSchema = z.object({
   clientId: z.string().uuid({ message: "Selecione um cliente" }),
@@ -105,6 +106,27 @@ export default function VehicleFormDialog({
     },
   });
 
+  const friendlyMessage = (rawMessage: string | null | undefined) => {
+    if (!rawMessage) return t("vehicles.toasts.defaultError");
+    if (/\b(select|insert|update|delete)\b/i.test(rawMessage)) {
+      return t("vehicles.toasts.defaultError");
+    }
+    return rawMessage;
+  };
+
+  const extractApiErrorMessage = (payload: unknown) => {
+    if (payload && typeof payload === "object") {
+      const record = payload as Record<string, unknown>;
+      if (typeof record.error === "string") return record.error;
+      if (typeof record.message === "string") return record.message;
+      if (Array.isArray(record.errors) && record.errors.length > 0) {
+        const first = record.errors[0];
+        if (first && typeof first.message === "string") return first.message;
+      }
+    }
+    return null;
+  };
+
   async function onSubmit(values: VehicleFormValues) {
     if (!token) {
       toast.error(t("login.errorDesc"));
@@ -134,16 +156,28 @@ export default function VehicleFormDialog({
         ano: Number(vehicleDetails.AnoModelo),
       });
 
-      toast.success(t("vehicles.title"));
+      toast.success(t("vehicles.toasts.createdTitle"), {
+        description: t("vehicles.toasts.createdDescription", {
+          vehicle: `${vehicleDetails.Marca} ${vehicleDetails.Modelo}`,
+          plate: sanitizedPlate,
+        }),
+      });
       form.reset();
       setBrandCode(null);
       setModelCode(null);
       onCreated?.();
       onOpenChange(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("emptyState.error"),
-      );
+      let description = t("vehicles.toasts.defaultError");
+      if (error instanceof ApiError) {
+        const apiMessage = extractApiErrorMessage(error.payload);
+        description = friendlyMessage(apiMessage ?? error.message);
+      } else if (error instanceof Error) {
+        description = friendlyMessage(error.message);
+      }
+      toast.error(t("vehicles.toasts.createError"), {
+        description,
+      });
     } finally {
       setSubmitting(false);
     }

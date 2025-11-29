@@ -412,6 +412,9 @@
       "deleteDescription": "Do you want to remove {{model}} (plate {{plate}})? This action cannot be undone."
     },
     "toasts": {
+      "createdTitle": "Vehicle added",
+      "createdDescription": "{{vehicle}} (plate {{plate}}) was linked to the client.",
+      "createError": "Unable to create the vehicle",
       "updatedTitle": "Vehicle updated",
       "updatedDescription": "Information saved successfully.",
       "updateError": "Unable to update the vehicle",

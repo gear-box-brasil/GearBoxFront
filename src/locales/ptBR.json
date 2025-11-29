@@ -412,6 +412,9 @@
       "deleteDescription": "Deseja remover o veículo {{model}} (placa {{plate}})? Esta ação não poderá ser desfeita."
     },
     "toasts": {
+      "createdTitle": "Veículo cadastrado",
+      "createdDescription": "{{vehicle}} (placa {{plate}}) foi adicionado ao cliente.",
+      "createError": "Não foi possível cadastrar o veículo",
       "updatedTitle": "Veículo atualizado",
       "updatedDescription": "As informações foram salvas com sucesso.",
       "updateError": "Não foi possível atualizar o veículo",
