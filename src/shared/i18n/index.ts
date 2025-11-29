@@ -23,13 +23,21 @@ import enUS from "@/locales/enUS.json";
 
 const STORAGE_KEY = "gearbox_locale";
 const fallbackLng = "pt-BR";
+const SUPPORTED_LANGUAGES = ["pt-BR", "en-US"] as const;
+
+const normalizeLanguage = (value?: string | null): string => {
+  if (!value) return fallbackLng;
+  const normalized = value.toLowerCase();
+  if (normalized.startsWith("en")) return "en-US";
+  if (normalized.startsWith("pt")) return "pt-BR";
+  return fallbackLng;
+};
 
 const stored =
   typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
 const browserLng =
   typeof navigator !== "undefined" ? navigator.language : fallbackLng;
-const initialLng =
-  stored || (browserLng.startsWith("en") ? "en-US" : fallbackLng);
+const initialLng = normalizeLanguage(stored || browserLng);
 
 i18n.use(initReactI18next).init({
   lng: initialLng,
@@ -45,14 +53,17 @@ i18n.use(initReactI18next).init({
 });
 
 export function setLanguage(lng: string) {
-  i18n.changeLanguage(lng);
+  const next = normalizeLanguage(lng);
+  i18n.changeLanguage(next);
   if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, lng);
+    localStorage.setItem(STORAGE_KEY, next);
   }
 }
 
 export function getLanguage() {
-  return i18n.language || fallbackLng;
+  return normalizeLanguage(i18n.language);
 }
+
+export { normalizeLanguage, SUPPORTED_LANGUAGES };
 
 export default i18n;

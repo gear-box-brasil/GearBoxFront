@@ -46,6 +46,8 @@ export function LanguageSwitcher({
   const FLAGS: Record<string, string> = {
     "pt-BR": "🇧🇷",
     "en-US": "🇺🇸",
+    ptBR: "🇧🇷",
+    enUS: "🇺🇸",
   };
 
   const LABELS: Record<string, string> = {
