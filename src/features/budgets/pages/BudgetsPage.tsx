@@ -16,7 +16,7 @@
  * Caso contrário, veja <https://www.gnu.org/licenses/>.
  */
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
@@ -228,10 +228,35 @@ export default function BudgetsPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const normalizedSearch = searchTerm.trim();
+  const [optimisticStatuses, setOptimisticStatuses] = useState<
+    Record<string, BudgetStatus | undefined>
+  >({});
   const [lastApprovedService, setLastApprovedService] = useState<{
     budgetId: string;
     serviceId: string;
   } | null>(null);
+
+  const setOptimisticStatus = useCallback(
+    (budgetId: string, status?: BudgetStatus) => {
+      if (!budgetId) return;
+      setOptimisticStatuses((current) => {
+        const next = { ...current };
+        if (status) {
+          next[budgetId] = status;
+        } else {
+          delete next[budgetId];
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (budgetsQuery.data) {
+      setOptimisticStatuses({});
+    }
+  }, [budgetsQuery.data]);
 
   const budgetsQuery = useBudgets({
     page,
@@ -284,9 +309,12 @@ export default function BudgetsPage() {
   const approveBudgetMutation = useMutation({
     mutationFn: ({ id, assignedToId }: { id: string; assignedToId: string }) =>
       acceptBudget(token!, id, { assignedToId, confirm: true }),
-    onSuccess: ({ service }) => {
+    onSuccess: ({ service }, variables) => {
       queryClient.invalidateQueries({ queryKey: gearboxKeys.budgets.all });
       queryClient.invalidateQueries({ queryKey: gearboxKeys.services.all });
+      if (variables?.id) {
+        setOptimisticStatus(variables.id, "aceito");
+      }
       setLastApprovedService({
         budgetId: service.budgetId ?? "",
         serviceId: service.id,
@@ -304,13 +332,17 @@ export default function BudgetsPage() {
         ),
       });
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, variables) => {
+      if (variables?.id) {
+        setOptimisticStatus(variables.id, undefined);
+      }
+      const description = normalizeErrorMessage(
+        extractApiErrorMessage(error),
+        t("budgets.toasts.defaultError"),
+      );
       toast({
         title: t("budgets.toasts.approveError"),
-        description:
-          error instanceof Error
-            ? error.message
-            : t("budgets.toasts.defaultError"),
+        description,
         variant: "destructive",
       });
     },
@@ -419,7 +451,9 @@ export default function BudgetsPage() {
     const toDate = createdTo ? new Date(createdTo) : null;
 
     const filtered = budgetList.filter((budget) => {
-      if (statusFilter !== "todos" && budget.status !== statusFilter)
+      const currentStatus =
+        optimisticStatuses[budget.id] ?? budget.status;
+      if (statusFilter !== "todos" && currentStatus !== statusFilter)
         return false;
       if (fromDate || toDate) {
         const createdAt = budget.createdAt ? new Date(budget.createdAt) : null;
@@ -458,6 +492,7 @@ export default function BudgetsPage() {
     statusFilter,
     createdFrom,
     createdTo,
+    optimisticStatuses,
   ]);
 
   const createDisabled =
@@ -527,13 +562,25 @@ export default function BudgetsPage() {
     }
 
     try {
+      setOptimisticStatus(budgetToApprove.id, "aceito");
       await approveBudgetMutation.mutateAsync({
         id: budgetToApprove.id,
         assignedToId,
       });
       closeApprovalDialog();
-    } catch {
-      /* toast is handled by mutation */
+    } catch (error) {
+      setOptimisticStatus(budgetToApprove.id, undefined);
+      if (error instanceof ApiError || error instanceof Error) {
+        const description = normalizeErrorMessage(
+          extractApiErrorMessage(error),
+          t("budgets.toasts.defaultError"),
+        );
+        toast({
+          title: t("budgets.toasts.approveError"),
+          description,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -551,12 +598,24 @@ export default function BudgetsPage() {
       return;
     }
     try {
+      setOptimisticStatus(budget.id, "aceito");
       await approveBudgetMutation.mutateAsync({
         id: budget.id,
         assignedToId: user.id,
       });
-    } catch {
-      /* toast handled by mutation */
+    } catch (error) {
+      setOptimisticStatus(budget.id, undefined);
+      if (error instanceof ApiError || error instanceof Error) {
+        const description = normalizeErrorMessage(
+          extractApiErrorMessage(error),
+          t("budgets.toasts.defaultError"),
+        );
+        toast({
+          title: t("budgets.toasts.approveError"),
+          description,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -614,6 +673,8 @@ export default function BudgetsPage() {
       <>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {filteredBudgets.map((budget) => {
+            const effectiveStatus =
+              optimisticStatuses[budget.id] ?? budget.status;
             const car = carMap.get(budget.carId);
             const clientName =
               clientMap.get(budget.clientId) ?? "Cliente não localizado";
@@ -623,7 +684,7 @@ export default function BudgetsPage() {
                 ? (mechanicMap.get(budget.userId) ?? budget.userId.slice(0, 8))
                 : "—");
             const config =
-              statusConfigMap[budget.status] ?? statusConfigMap.aberto;
+              statusConfigMap[effectiveStatus] ?? statusConfigMap.aberto;
             const createdAt = budget.createdAt
               ? dateFormat.format(new Date(budget.createdAt))
               : "—";
@@ -647,7 +708,7 @@ export default function BudgetsPage() {
                 : "—";
             const hasActiveMechanics = activeMechanics.length > 0;
             const canManageBudget = isBudgetOwner;
-            const isOpenForApproval = budget.status === "aberto";
+            const isOpenForApproval = effectiveStatus === "aberto";
             const approveDisabled =
               !isOpenForApproval ||
               approving ||
