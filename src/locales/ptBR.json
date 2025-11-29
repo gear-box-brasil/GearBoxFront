@@ -320,6 +320,10 @@
       "cancelado": "Cancelado",
       "cancelar": "Cancelar"
     },
+    "alerts": {
+      "serviceCreatedTitle": "Serviço criado a partir do orçamento",
+      "serviceCreatedDescription": "O serviço {{serviceId}} foi criado e já está disponível na tela de Ordens."
+    },
     "table": {
       "code": "Orçamento",
       "client": "Cliente",

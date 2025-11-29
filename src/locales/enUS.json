@@ -320,6 +320,10 @@
       "cancelado": "Cancelled",
       "cancelar": "Cancel"
     },
+    "alerts": {
+      "serviceCreatedTitle": "Budget converted into a service",
+      "serviceCreatedDescription": "Service {{serviceId}} is now available on the Orders page."
+    },
     "table": {
       "code": "Budget",
       "client": "Client",

@@ -23,6 +23,7 @@ import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/PageHeader";
 import { SearchInput } from "@/components/SearchInput";
 import { EmptyState } from "@/components/EmptyState";
@@ -200,17 +201,15 @@ export default function BudgetsPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const normalizedSearch = searchTerm.trim();
+  const [lastApprovedService, setLastApprovedService] = useState<{
+    budgetId: string;
+    serviceId: string;
+  } | null>(null);
 
-  const selectedStatus = statusFilter === "todos" ? null : statusFilter;
   const budgetsQuery = useBudgets({
     page,
     perPage: 10,
     search: normalizedSearch || undefined,
-    filters: {
-      startDate: createdFrom || null,
-      endDate: createdTo || null,
-      status: selectedStatus,
-    },
   });
   const clientsQuery = useClients({ page: 1, perPage: 200 });
   const carsQuery = useCars({ page: 1, perPage: 200 });
@@ -257,6 +256,10 @@ export default function BudgetsPage() {
     onSuccess: ({ service }) => {
       queryClient.invalidateQueries({ queryKey: gearboxKeys.budgets.all });
       queryClient.invalidateQueries({ queryKey: gearboxKeys.services.all });
+      setLastApprovedService({
+        budgetId: service.budgetId ?? "",
+        serviceId: service.id,
+      });
       toast({
         title: t("budgets.toasts.approveTitle"),
         description: t("budgets.toasts.approveDescription", { id: service.id }),
@@ -946,6 +949,36 @@ export default function BudgetsPage() {
 
   return (
     <>
+      {lastApprovedService && (
+        <div className="page-container">
+          <Alert className="mb-4 border-green-200 bg-green-50 text-green-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100">
+            <AlertTitle>{t("budgets.alerts.serviceCreatedTitle")}</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <span>
+                {t("budgets.alerts.serviceCreatedDescription", {
+                  serviceId: lastApprovedService.serviceId,
+                })}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => navigate("/ordens")}
+                >
+                  {t("navigation.orders")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setLastApprovedService(null)}
+                >
+                  {t("common.actions.close")}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
       <div className="page-container space-y-8">
         <PageHeader
           eyebrow={t("owner.header.eyebrow")}
