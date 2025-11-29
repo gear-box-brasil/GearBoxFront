@@ -36,6 +36,7 @@ type UseBudgetsParams = {
     startDate?: string | null;
     endDate?: string | null;
   };
+  search?: string;
 };
 
 export function useBudgets({
@@ -43,9 +44,11 @@ export function useBudgets({
   perPage = 10,
   enabled = true,
   filters,
+  search,
 }: UseBudgetsParams = {}) {
   const { token, isOwner, user } = useAuth();
   const scope = isOwner ? "owner" : "mine";
+  const normalizedSearch = search?.trim() || undefined;
   const queryParams = {
     page,
     perPage,
@@ -53,6 +56,7 @@ export function useBudgets({
     userId: !isOwner ? user?.id : undefined,
     startDate: filters?.startDate ?? undefined,
     endDate: filters?.endDate ?? undefined,
+    search: normalizedSearch,
   };
 
   return useQuery<

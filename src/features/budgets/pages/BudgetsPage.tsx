@@ -205,8 +205,13 @@ export default function BudgetsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const normalizedSearch = searchTerm.trim();
 
-  const budgetsQuery = useBudgets({ page, perPage: 10 });
+  const budgetsQuery = useBudgets({
+    page,
+    perPage: 10,
+    search: normalizedSearch || undefined,
+  });
   const clientsQuery = useClients({ page: 1, perPage: 200 });
   const carsQuery = useCars({ page: 1, perPage: 200 });
 

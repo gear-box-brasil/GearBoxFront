@@ -59,10 +59,25 @@ export default function ClientsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const normalizedSearch = searchTerm.trim();
+  const isSearching = normalizedSearch.length > 0;
+  const effectivePage = isSearching ? 1 : page;
+  const effectivePerPage = isSearching ? 50 : 9;
 
   const clientsQuery = useQuery({
-    queryKey: ["clients", token, page],
-    queryFn: () => listClients(token!, { page, perPage: 9 }),
+    queryKey: [
+      "clients",
+      token,
+      effectivePage,
+      effectivePerPage,
+      normalizedSearch,
+    ],
+    queryFn: () =>
+      listClients(token!, {
+        page: effectivePage,
+        perPage: effectivePerPage,
+        search: normalizedSearch || undefined,
+      }),
     enabled: Boolean(token),
     keepPreviousData: true,
   });
@@ -172,7 +187,8 @@ export default function ClientsPage() {
       const matchesBase =
         client.nome.toLowerCase().includes(term) ||
         client.email?.toLowerCase().includes(term) ||
-        client.telefone.toLowerCase().includes(term);
+        client.telefone.toLowerCase().includes(term) ||
+        client.id.toLowerCase().includes(term);
       if (matchesBase) return true;
       const clientCars = carsByClient.get(client.id) ?? [];
       return clientCars.some((car) =>
@@ -527,7 +543,7 @@ export default function ClientsPage() {
             })}
           </div>
 
-          {clientsQuery.data?.meta && (
+          {!isSearching && clientsQuery.data?.meta && (
             <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <p className="text-sm text-muted-foreground">
                 Página {clientsQuery.data.meta.currentPage} de{" "}

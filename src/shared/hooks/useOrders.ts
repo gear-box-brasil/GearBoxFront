@@ -24,10 +24,15 @@ import { useCars } from "@/hooks/useCars";
 type UseOrdersParams = {
   page?: number;
   perPage?: number;
+  search?: string;
 };
 
-export function useOrders({ page = 1, perPage = 10 }: UseOrdersParams = {}) {
-  const servicesQuery = useServices({ page, perPage });
+export function useOrders({
+  page = 1,
+  perPage = 10,
+  search,
+}: UseOrdersParams = {}) {
+  const servicesQuery = useServices({ page, perPage, search });
   const clientsQuery = useClients({ page: 1, perPage: 200 });
   const carsQuery = useCars({ page: 1, perPage: 200 });
 

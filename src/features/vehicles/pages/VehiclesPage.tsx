@@ -62,11 +62,18 @@ export default function Veiculos() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const normalizedSearch = searchTerm.trim();
 
   const carsQuery = useQuery({
-    queryKey: ["cars", token, page],
-    queryFn: () => listCars(token!, { page, perPage: 12 }),
+    queryKey: ["cars", token, page, normalizedSearch],
+    queryFn: () =>
+      listCars(token!, {
+        page,
+        perPage: 12,
+        search: normalizedSearch || undefined,
+      }),
     enabled: Boolean(token),
+    keepPreviousData: true,
   });
 
   const clientsQuery = useQuery({
@@ -136,10 +143,11 @@ export default function Veiculos() {
     return new Map(entries);
   }, [clientsQuery.data]);
 
-  const cars = useMemo(() => carsQuery.data?.data ?? [], [carsQuery.data]);
   const filteredCars = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    return cars.filter((car) => {
+    const list = carsQuery.data?.data ?? [];
+    if (!term) return list;
+    return list.filter((car) => {
       const clientName = clientMap.get(car.clientId)?.toLowerCase() ?? "";
       return (
         car.marca.toLowerCase().includes(term) ||
@@ -148,7 +156,7 @@ export default function Veiculos() {
         clientName.includes(term)
       );
     });
-  }, [cars, searchTerm, clientMap]);
+  }, [carsQuery.data, searchTerm, clientMap]);
 
   const isLoading = carsQuery.isLoading;
   const isError = carsQuery.isError;

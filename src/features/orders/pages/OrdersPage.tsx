@@ -200,11 +200,13 @@ export default function Ordens() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const statusLabels = statusConfig(t);
+  const normalizedSearch = searchTerm.trim();
 
   const { servicesQuery, clientsQuery, carsQuery, clientMap, carMap } =
     useOrders({
       page,
       perPage: 10,
+      search: normalizedSearch || undefined,
     });
 
   const updateStatusMutation = useMutation({

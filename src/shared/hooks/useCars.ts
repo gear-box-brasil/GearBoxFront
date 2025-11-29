@@ -28,20 +28,24 @@ type UseCarsParams = {
   page?: number;
   perPage?: number;
   enabled?: boolean;
+  search?: string;
 };
 
 export function useCars({
   page = 1,
   perPage = 50,
   enabled = true,
+  search,
 }: UseCarsParams = {}) {
   const { token } = useAuth();
+  const normalizedSearch = search?.trim() || undefined;
 
   const query = useQuery({
-    queryKey: gearboxKeys.cars.list({ page, perPage }),
-    queryFn: () => listCars(token!, { page, perPage }),
+    queryKey: gearboxKeys.cars.list({ page, perPage, search: normalizedSearch }),
+    queryFn: () => listCars(token!, { page, perPage, search: normalizedSearch }),
     enabled: Boolean(token) && enabled,
     staleTime: QUERY_STALE_TIMES.cars,
+    keepPreviousData: true,
     select: (data) => ({
       list: data.data as Car[],
       meta: data.meta as PaginatedMeta,

@@ -38,6 +38,7 @@ type UseServicesParams = {
   perPage?: number;
   enabled?: boolean;
   filters?: ServiceFilters;
+  search?: string;
 };
 
 export function useServices({
@@ -45,9 +46,11 @@ export function useServices({
   perPage = 10,
   enabled = true,
   filters,
+  search,
 }: UseServicesParams = {}) {
   const { token, isOwner, user } = useAuth();
   const scope = isOwner ? "owner" : "mine";
+  const normalizedSearch = search?.trim() || undefined;
   const queryParams = {
     page,
     perPage,
@@ -56,6 +59,7 @@ export function useServices({
     assignedToId: !isOwner ? user?.id : undefined,
     startDate: filters?.startDate ?? undefined,
     endDate: filters?.endDate ?? undefined,
+    search: normalizedSearch,
   };
 
   return useQuery<
@@ -67,6 +71,7 @@ export function useServices({
     queryFn: () => listServices(token!, queryParams),
     enabled: Boolean(token) && enabled,
     staleTime: QUERY_STALE_TIMES.services,
+    keepPreviousData: true,
     select: (data) => ({
       list: data.data,
       meta: data.meta,

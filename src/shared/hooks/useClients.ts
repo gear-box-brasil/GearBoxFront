@@ -28,20 +28,25 @@ type UseClientsParams = {
   page?: number;
   perPage?: number;
   enabled?: boolean;
+  search?: string;
 };
 
 export function useClients({
   page = 1,
   perPage = 50,
   enabled = true,
+  search,
 }: UseClientsParams = {}) {
   const { token } = useAuth();
+  const normalizedSearch = search?.trim() || undefined;
 
   const query = useQuery({
-    queryKey: gearboxKeys.clients.list({ page, perPage }),
-    queryFn: () => listClients(token!, { page, perPage }),
+    queryKey: gearboxKeys.clients.list({ page, perPage, search: normalizedSearch }),
+    queryFn: () =>
+      listClients(token!, { page, perPage, search: normalizedSearch }),
     enabled: Boolean(token) && enabled,
     staleTime: QUERY_STALE_TIMES.clients,
+    keepPreviousData: true,
     select: (data) => ({
       list: data.data as Client[],
       meta: data.meta as PaginatedMeta,
