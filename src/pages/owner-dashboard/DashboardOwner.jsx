@@ -44,7 +44,6 @@ import { EmptyState } from "@/components/EmptyState";
 const PER_PAGE = 200;
 const PERIOD_OPTIONS = [
   { value: "last7Days", label: "Últimos 7 dias" },
-  { value: "last30Days", label: "Últimos 30 dias" },
   { value: "currentMonth", label: "Mês atual" },
   { value: "previousMonth", label: "Mês anterior" },
   { value: "year", label: "Ano" },
@@ -55,7 +54,7 @@ const PERIOD_OPTIONS = [
 export default function DashboardOwner() {
   const { user, token, logout } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedPeriod, setSelectedPeriod] = useState("last30Days");
+  const [selectedPeriod, setSelectedPeriod] = useState("currentMonth");
   const [selectedMechanicId, setSelectedMechanicId] = useState(null);
   const [userSearch, setUserSearch] = useState("");
   const [deletingUserId, setDeletingUserId] = useState(null);
@@ -810,11 +809,6 @@ function getPeriodRange(value, earliestDate = null) {
     case "last7Days": {
       const start = new Date(now);
       start.setDate(now.getDate() - 6);
-      return { start: startOfDay(start), end: endOfDay(now) };
-    }
-    case "last30Days": {
-      const start = new Date(now);
-      start.setDate(now.getDate() - 29);
       return { start: startOfDay(start), end: endOfDay(now) };
     }
     case "currentMonth": {
