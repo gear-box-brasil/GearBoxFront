@@ -610,7 +610,9 @@ export default function Ordens() {
                           Responsável
                         </p>
                         <p className="font-medium text-foreground">
-                          {service.user?.nome ?? "—"}
+                          {service.assignedTo?.nome ??
+                            service.user?.nome ??
+                            "—"}
                         </p>
                       </div>
                     </div>

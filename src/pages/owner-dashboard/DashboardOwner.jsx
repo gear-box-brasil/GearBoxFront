@@ -129,6 +129,10 @@ export default function DashboardOwner() {
     () => filterByPeriod(services, (item) => item.createdAt, periodRange),
     [services, periodRange],
   );
+
+  const getServiceResponsibleId = useCallback((service) => {
+    return service.assignedToId || service.userId || null;
+  }, []);
   const budgetsPreviousPeriod = useMemo(
     () =>
       filterByPeriod(budgets, (item) => item.createdAt, previousPeriodRange),
@@ -156,9 +160,10 @@ export default function DashboardOwner() {
 
   const mechanicRows = useMemo(() => {
     const servicesByMechanic = servicesInPeriod.reduce((acc, service) => {
-      if (!service.userId) return acc;
-      acc[service.userId] = acc[service.userId] ?? [];
-      acc[service.userId].push(service);
+      const responsibleId = getServiceResponsibleId(service);
+      if (!responsibleId) return acc;
+      acc[responsibleId] = acc[responsibleId] ?? [];
+      acc[responsibleId].push(service);
       return acc;
     }, {});
 
@@ -206,7 +211,7 @@ export default function DashboardOwner() {
         ticketAverage,
       };
     });
-  }, [mechanics, budgetsInPeriod, servicesInPeriod]);
+  }, [mechanics, budgetsInPeriod, servicesInPeriod, getServiceResponsibleId]);
 
   const comparisonData = useMemo(
     () =>
@@ -549,7 +554,7 @@ export default function DashboardOwner() {
     });
 
     servicesInPeriod.forEach((service) => {
-      if (service.userId !== selectedMechanic.id) return;
+      if (getServiceResponsibleId(service) !== selectedMechanic.id) return;
       const period = formatPeriod(service.createdAt);
       const node = addPoint(period);
       if (service.status === "Concluído") node.services += 1;
@@ -558,7 +563,7 @@ export default function DashboardOwner() {
     return Array.from(map.values()).sort(
       (a, b) => new Date(a.period) - new Date(b.period),
     );
-  }, [selectedMechanic, budgetsInPeriod, servicesInPeriod]);
+  }, [selectedMechanic, budgetsInPeriod, servicesInPeriod, getServiceResponsibleId]);
 
   const createUserMutation = useMutation({
     mutationFn: (payload) => createUser(token, payload),
