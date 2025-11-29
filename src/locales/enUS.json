@@ -214,8 +214,8 @@
     "defaultSubtitle": "Consolidated view"
   },
   "login": {
-    "title": "Welcome to Gear Box",
-    "subtitle": "Sign in to manage orders, clients, and vehicles",
+    "title": "Gear Box",
+    "subtitle": "Manage budgets, services, clients, and staff",
     "email": "Email",
     "password": "Password",
     "placeholderEmail": "you@email.com",
@@ -225,7 +225,13 @@
     "successTitle": "Signed in successfully",
     "successDesc": "Welcome back!",
     "errorTitle": "Login error",
-    "errorDesc": "Check your credentials"
+    "errorDesc": "Check your credentials",
+    "errors": {
+      "connectionTitle": "Connection error",
+      "connectionDescription": "Unable to reach the server. Check your internet connection or try again shortly.",
+      "invalidCredentialsTitle": "Invalid credentials",
+      "invalidCredentialsDescription": "Incorrect email or password. Please double-check your information and try again."
+    }
   },
   "orders": {
     "title": "Work Orders",

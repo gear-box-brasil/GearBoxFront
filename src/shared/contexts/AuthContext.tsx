@@ -30,7 +30,7 @@ import {
   logout as logoutRequest,
 } from "@/services/gearbox";
 import type { Role } from "@/types/api";
-import { UNAUTHORIZED_EVENT } from "@/lib/api";
+import { ApiError, UNAUTHORIZED_EVENT } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 
 interface User {
@@ -113,6 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(AUTH_TOKEN_KEY, tokenValue);
       localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData));
     } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
       throw new Error(
         error instanceof Error
           ? error.message

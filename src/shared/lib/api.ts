@@ -31,6 +31,7 @@ export const UNAUTHORIZED_EVENT = "gearbox:unauthorized";
 export class ApiError extends Error {
   status?: number;
   payload?: unknown;
+  isNetworkError?: boolean;
 }
 
 const parseJsonSafe = async (response: Response) => {
@@ -77,12 +78,23 @@ export async function apiRequest<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers: finalHeaders,
-    body: finalBody,
-    signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: finalHeaders,
+      body: finalBody,
+      signal,
+    });
+  } catch (error) {
+    const apiError = new ApiError(
+      "Erro de conexão. Verifique sua internet ou o servidor e tente novamente.",
+    );
+    apiError.status = 0;
+    apiError.payload = error;
+    apiError.isNetworkError = true;
+    throw apiError;
+  }
 
   const responseBody = await parseJsonSafe(response);
 

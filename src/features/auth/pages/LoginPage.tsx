@@ -34,6 +34,7 @@ import { Logo } from "@/components/Logo";
 import { useTranslation } from "react-i18next";
 import Footer from "@/components/Footer";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ApiError } from "@/lib/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -56,10 +57,25 @@ export default function Login() {
       });
       navigate("/");
     } catch (error) {
+      let title = t("login.errorTitle");
+      let description =
+        error instanceof Error ? error.message : t("login.errorDesc");
+
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          title = t("login.errors.invalidCredentialsTitle");
+          description = t("login.errors.invalidCredentialsDescription");
+        } else if (error.isNetworkError || error.status === 0) {
+          title = t("login.errors.connectionTitle");
+          description = t("login.errors.connectionDescription");
+        } else {
+          description = error.message || t("login.errorDesc");
+        }
+      }
+
       toast({
-        title: t("login.errorTitle"),
-        description:
-          error instanceof Error ? error.message : t("login.errorDesc"),
+        title,
+        description,
         variant: "destructive",
       });
     } finally {

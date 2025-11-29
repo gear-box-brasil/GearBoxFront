@@ -225,7 +225,13 @@
     "successTitle": "Login realizado com sucesso",
     "successDesc": "Bem-vindo de volta!",
     "errorTitle": "Erro ao fazer login",
-    "errorDesc": "Verifique suas credenciais"
+    "errorDesc": "Verifique suas credenciais",
+    "errors": {
+      "connectionTitle": "Falha de conexão",
+      "connectionDescription": "Não foi possível se conectar ao servidor. Verifique sua internet ou tente novamente em instantes.",
+      "invalidCredentialsTitle": "Credenciais inválidas",
+      "invalidCredentialsDescription": "E-mail ou senha incorretos. Confira os dados digitados e tente novamente."
+    }
   },
   "orders": {
     "title": "Ordens de Serviço",
