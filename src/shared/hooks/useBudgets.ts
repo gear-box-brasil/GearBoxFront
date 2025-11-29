@@ -21,7 +21,12 @@ import { listBudgets } from "@/services/gearbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { gearboxKeys } from "@/lib/queryKeys";
 import { QUERY_STALE_TIMES } from "@/config/query";
-import type { Budget, PaginatedMeta, PaginatedResponse } from "@/types/api";
+import type {
+  Budget,
+  BudgetStatus,
+  PaginatedMeta,
+  PaginatedResponse,
+} from "@/types/api";
 
 type PaginatedListResult<T> = {
   list: T[];
@@ -35,6 +40,7 @@ type UseBudgetsParams = {
   filters?: {
     startDate?: string | null;
     endDate?: string | null;
+    status?: BudgetStatus | null;
   };
   search?: string;
 };
@@ -56,6 +62,7 @@ export function useBudgets({
     userId: !isOwner ? user?.id : undefined,
     startDate: filters?.startDate ?? undefined,
     endDate: filters?.endDate ?? undefined,
+    status: filters?.status ?? undefined,
     search: normalizedSearch,
   };
 

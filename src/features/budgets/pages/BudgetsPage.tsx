@@ -105,11 +105,6 @@ const statusConfig = (
     badgeClass:
       "bg-destructive-light text-destructive border border-destructive/30",
   },
-  cancelado: {
-    label: t("budgets.status.cancelado"),
-    description: t("budgets.status.cancelado"),
-    badgeClass: "bg-muted text-muted-foreground border border-border",
-  },
 });
 
 const currencyFormat = new Intl.NumberFormat("pt-BR", {
@@ -126,7 +121,6 @@ const BUDGET_STATUS_OPTIONS: (BudgetStatus | "todos")[] = [
   "aberto",
   "aceito",
   "recusado",
-  "cancelado",
 ];
 
 const BudgetDescription = ({ description }: { description: string }) => {
@@ -207,10 +201,16 @@ export default function BudgetsPage() {
   const { t } = useTranslation();
   const normalizedSearch = searchTerm.trim();
 
+  const selectedStatus = statusFilter === "todos" ? null : statusFilter;
   const budgetsQuery = useBudgets({
     page,
     perPage: 10,
     search: normalizedSearch || undefined,
+    filters: {
+      startDate: createdFrom || null,
+      endDate: createdTo || null,
+      status: selectedStatus,
+    },
   });
   const clientsQuery = useClients({ page: 1, perPage: 200 });
   const carsQuery = useCars({ page: 1, perPage: 200 });
@@ -1003,9 +1003,10 @@ export default function BudgetsPage() {
             </p>
             <Select
               value={statusFilter}
-              onValueChange={(value: typeof statusFilter) =>
-                setStatusFilter(value)
-              }
+              onValueChange={(value: typeof statusFilter) => {
+                setStatusFilter(value);
+                setPage(1);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder={t("budgets.filters.all")} />
