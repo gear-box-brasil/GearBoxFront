@@ -21,11 +21,7 @@ import { listBudgets } from "@/services/gearbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { gearboxKeys } from "@/lib/queryKeys";
 import { QUERY_STALE_TIMES } from "@/config/query";
-import type {
-  Budget,
-  PaginatedMeta,
-  PaginatedResponse,
-} from "@/types/api";
+import type { Budget, PaginatedMeta, PaginatedResponse } from "@/types/api";
 
 type PaginatedListResult<T> = {
   list: T[];

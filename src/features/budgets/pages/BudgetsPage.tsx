@@ -86,7 +86,11 @@ const EMPTY_BUDGETS: Budget[] = [];
 const extractApiErrorMessage = (error: unknown) => {
   if (error instanceof ApiError) {
     const payload = error.payload as
-      | { error?: string; message?: string; errors?: Array<{ message?: string }> }
+      | {
+          error?: string;
+          message?: string;
+          errors?: Array<{ message?: string }>;
+        }
       | undefined;
     if (payload?.errors && payload.errors.length > 0) {
       const message = payload.errors[0]?.message;
@@ -100,10 +104,7 @@ const extractApiErrorMessage = (error: unknown) => {
   return null;
 };
 
-const normalizeErrorMessage = (
-  message: string | null,
-  fallback: string,
-) => {
+const normalizeErrorMessage = (message: string | null, fallback: string) => {
   if (!message) return fallback;
   if (/\b(select|update|delete|insert)\b/i.test(message)) return fallback;
   return message;
@@ -225,16 +226,16 @@ export default function BudgetsPage() {
   const confirmDialogSettledRef = useRef(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
- const { toast } = useToast();
- const { t } = useTranslation();
- const normalizedSearch = searchTerm.trim();
- const [optimisticStatuses, setOptimisticStatuses] = useState<
-   Record<string, BudgetStatus | undefined>
- >({});
- const [lastApprovedService, setLastApprovedService] = useState<{
-   budgetId: string;
-   serviceId: string;
- } | null>(null);
+  const { toast } = useToast();
+  const { t } = useTranslation();
+  const normalizedSearch = searchTerm.trim();
+  const [optimisticStatuses, setOptimisticStatuses] = useState<
+    Record<string, BudgetStatus | undefined>
+  >({});
+  const [lastApprovedService, setLastApprovedService] = useState<{
+    budgetId: string;
+    serviceId: string;
+  } | null>(null);
 
   const setOptimisticStatus = useCallback(
     (budgetId: string, status?: BudgetStatus) => {
@@ -252,15 +253,15 @@ export default function BudgetsPage() {
     [],
   );
 
- const budgetsQuery = useBudgets({
-   page,
-   perPage: 10,
-   search: normalizedSearch || undefined,
-   filters: {
-     startDate: createdFrom || null,
-     endDate: createdTo || null,
-   },
- });
+  const budgetsQuery = useBudgets({
+    page,
+    perPage: 10,
+    search: normalizedSearch || undefined,
+    filters: {
+      startDate: createdFrom || null,
+      endDate: createdTo || null,
+    },
+  });
 
   useEffect(() => {
     if (budgetsQuery.data) {
@@ -452,8 +453,7 @@ export default function BudgetsPage() {
     const toDate = createdTo ? new Date(createdTo) : null;
 
     const filtered = budgetList.filter((budget) => {
-      const currentStatus =
-        optimisticStatuses[budget.id] ?? budget.status;
+      const currentStatus = optimisticStatuses[budget.id] ?? budget.status;
       if (statusFilter !== "todos" && currentStatus !== statusFilter)
         return false;
       if (fromDate || toDate) {

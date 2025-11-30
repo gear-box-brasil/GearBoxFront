@@ -41,7 +41,11 @@ export function useClients({
   const normalizedSearch = search?.trim() || undefined;
 
   const query = useQuery({
-    queryKey: gearboxKeys.clients.list({ page, perPage, search: normalizedSearch }),
+    queryKey: gearboxKeys.clients.list({
+      page,
+      perPage,
+      search: normalizedSearch,
+    }),
     queryFn: () =>
       listClients(token!, { page, perPage, search: normalizedSearch }),
     enabled: Boolean(token) && enabled,

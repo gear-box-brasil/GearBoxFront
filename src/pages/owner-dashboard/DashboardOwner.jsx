@@ -563,7 +563,12 @@ export default function DashboardOwner() {
     return Array.from(map.values()).sort(
       (a, b) => new Date(a.period) - new Date(b.period),
     );
-  }, [selectedMechanic, budgetsInPeriod, servicesInPeriod, getServiceResponsibleId]);
+  }, [
+    selectedMechanic,
+    budgetsInPeriod,
+    servicesInPeriod,
+    getServiceResponsibleId,
+  ]);
 
   const createUserMutation = useMutation({
     mutationFn: (payload) => createUser(token, payload),

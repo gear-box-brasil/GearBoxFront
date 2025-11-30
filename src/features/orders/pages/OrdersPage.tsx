@@ -327,6 +327,16 @@ export default function Ordens() {
     return Math.ceil(diffMs / (24 * 60 * 60 * 1000));
   };
 
+  const getServiceResponsibilityIds = (service: (typeof services)[number]) => {
+    const ids: string[] = [];
+    if (service.assignedToId) {
+      ids.push(service.assignedToId);
+    } else if (service.userId) {
+      ids.push(service.userId);
+    }
+    return ids;
+  };
+
   const getBaseForecast = (service: (typeof services)[number]) => {
     if (service.prazoEstimadoDias && service.createdAt) {
       const base = getDateIfValid(service.createdAt);
@@ -350,10 +360,12 @@ export default function Ordens() {
     if (isOwner) return services;
     const mechanicId = user?.id;
     if (!mechanicId) return [];
-    return services.filter(
-      (service) =>
-        service.userId === mechanicId || service.assignedToId === mechanicId,
-    );
+    return services.filter((service) => {
+      if (service.assignedToId === mechanicId) return true;
+      if (service.userId === mechanicId) return true;
+      if (service.createdById === mechanicId) return true;
+      return false;
+    });
   }, [isOwner, services, user?.id]);
 
   const filteredServices = useMemo(() => {
@@ -521,15 +533,24 @@ export default function Ordens() {
               const total = currencyFormat.format(
                 Number(service.totalValue) || 0,
               );
+              const responsibilityIds = getServiceResponsibilityIds(service);
+              const hasResponsible = responsibilityIds.length > 0;
+              const isAssignedToAnother =
+                !isOwner &&
+                Boolean(user?.id) &&
+                hasResponsible &&
+                !responsibilityIds.includes(user?.id ?? "");
               const canUpdateService =
                 isOwner ||
-                service.userId === user?.id ||
-                service.assignedToId === user?.id;
+                (hasResponsible && responsibilityIds.includes(user?.id ?? ""));
               const canManageDeadline = canUpdateService;
               return (
                 <Card
                   key={service.id}
-                  className="border-border/50 bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
+                  className={cn(
+                    "border-border/50 bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all",
+                    isAssignedToAnother && "opacity-60",
+                  )}
                 >
                   <CardContent className="space-y-4 p-4 md:space-y-5 md:p-6">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -702,7 +723,11 @@ export default function Ordens() {
                                     canUpdateService,
                                   )
                                 }
-                                disabled={isUpdatingStatus || statusDialogOpen}
+                                disabled={
+                                  isUpdatingStatus ||
+                                  statusDialogOpen ||
+                                  !canUpdateService
+                                }
                               >
                                 <SelectTrigger>
                                   <SelectValue
@@ -722,8 +747,11 @@ export default function Ordens() {
                               )}
                             </div>
                           ) : (
-                            <p className="text-xs text-muted-foreground">
-                              {t("orders.dialogs.updateStatusDescription")}
+                            <p className="text-xs text-warning">
+                              {t("orders.messages.assignedToOther", {
+                                defaultValue:
+                                  "Este serviço foi atribuído a outro mecânico pelo administrador.",
+                              })}
                             </p>
                           )}
                         </div>

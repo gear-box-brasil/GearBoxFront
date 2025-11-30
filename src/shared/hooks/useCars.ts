@@ -41,8 +41,13 @@ export function useCars({
   const normalizedSearch = search?.trim() || undefined;
 
   const query = useQuery({
-    queryKey: gearboxKeys.cars.list({ page, perPage, search: normalizedSearch }),
-    queryFn: () => listCars(token!, { page, perPage, search: normalizedSearch }),
+    queryKey: gearboxKeys.cars.list({
+      page,
+      perPage,
+      search: normalizedSearch,
+    }),
+    queryFn: () =>
+      listCars(token!, { page, perPage, search: normalizedSearch }),
     enabled: Boolean(token) && enabled,
     staleTime: QUERY_STALE_TIMES.cars,
     keepPreviousData: true,

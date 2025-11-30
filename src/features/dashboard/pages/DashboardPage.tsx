@@ -16,7 +16,7 @@
  * Caso contrário, veja <https://www.gnu.org/licenses/>.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -454,6 +454,19 @@ export default function Dashboard() {
       ).slice(),
     [servicesQuery.data?.list],
   );
+
+  const mechanicNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    services.forEach((service) => {
+      if (service.assignedToId && service.assignedTo?.nome) {
+        map.set(service.assignedToId, service.assignedTo.nome);
+      }
+      if (service.userId && service.user?.nome) {
+        map.set(service.userId, service.user.nome);
+      }
+    });
+    return map;
+  }, [services]);
   const budgets = useMemo<Budget[]>(
     () => ((budgetsQuery.data?.list as Budget[] | undefined) ?? []).slice(),
     [budgetsQuery.data?.list],
@@ -463,10 +476,7 @@ export default function Dashboard() {
     if (isOwner) return services;
     const mechanicId = user?.id;
     if (!mechanicId) return [];
-    return services.filter(
-      (service) =>
-        service.userId === mechanicId || service.assignedToId === mechanicId,
-    );
+    return services.filter((service) => service.assignedToId === mechanicId);
   }, [isOwner, services, user?.id]);
 
   const visibleBudgets = useMemo(() => {
@@ -486,6 +496,22 @@ export default function Dashboard() {
         })
         .slice(0, 5),
     [visibleServices],
+  );
+
+  const resolveResponsibleName = useCallback(
+    (service: ExtendedService) => {
+      if (service.assignedTo?.nome) return service.assignedTo.nome;
+      if (service.assignedToId) {
+        const mapped = mechanicNameMap.get(service.assignedToId);
+        if (mapped) return mapped;
+        if (service.userId === service.assignedToId && service.user?.nome)
+          return service.user.nome;
+        if (service.assignedToId === user?.id && user?.name) return user.name;
+        return `#${service.assignedToId.slice(0, 8)}`;
+      }
+      return t("dashboardGeneral.recentOrders.noResponsible");
+    },
+    [mechanicNameMap, t, user?.id, user?.name],
   );
 
   const openOrders =
@@ -900,11 +926,7 @@ export default function Dashboard() {
               {recentOrders.map((order) => {
                 const isDelayed = isServiceOverdue(order);
                 const dueDate = getServiceForecastDate(order);
-                const responsibleName =
-                  order.assignedTo?.nome ??
-                  order.user?.nome ??
-                  order.budget?.user?.nome ??
-                  t("dashboardGeneral.recentOrders.noResponsible");
+                const responsibleName = resolveResponsibleName(order);
                 const car = carMap.get(order.carId);
                 const clientName =
                   clientMap.get(order.clientId) ??
@@ -957,11 +979,7 @@ export default function Dashboard() {
                 budgets.find((item) => item.id === selectedService.budgetId);
               const dueDate = getServiceForecastDate(selectedService);
               const priorityLabel = formatPriority(selectedService.priority, t);
-              const responsibleName =
-                selectedService.assignedTo?.nome ??
-                selectedService.user?.nome ??
-                selectedService.budget?.user?.nome ??
-                t("dashboardGeneral.recentOrders.noResponsible");
+              const responsibleName = resolveResponsibleName(selectedService);
               return (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3 text-sm">
