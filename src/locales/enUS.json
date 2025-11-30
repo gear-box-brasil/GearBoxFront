@@ -484,7 +484,7 @@
       "mechanic": "Responsible",
       "forecast": "Due date",
       "createdAt": "Created on",
-      "updatedAt": "Updated on {{date}}",
+      "updatedAt": "Updated on",
       "noForecast": "No due date",
       "noResponsible": "Unassigned",
       "unknownClient": "Client not found",
