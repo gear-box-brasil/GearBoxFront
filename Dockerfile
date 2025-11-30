@@ -14,8 +14,13 @@ RUN npm run build
 # ---------- Runtime stage ----------
 FROM nginx:stable-alpine AS runner
 
-# Config simples de SPA
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV PORT=80
+
+# Remove a config padrão para usar o template com envsubst
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Config simples de SPA (processada pelo entrypoint via envsubst)
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copia a build do Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
