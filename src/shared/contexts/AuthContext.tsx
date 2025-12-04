@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
   }, [logout]);
 
-  const isOwner = user?.role === "dono";
+  const isOwner = user?.role === "dono" || user?.role === "demo";
   const isAuthenticated = !!user && !!token;
 
   const value = useMemo(

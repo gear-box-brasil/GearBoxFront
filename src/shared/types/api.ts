@@ -16,7 +16,7 @@
  * Caso contrário, veja <https://www.gnu.org/licenses/>.
  */
 
-export type Role = "dono" | "mecanico";
+export type Role = "dono" | "mecanico" | "demo";
 
 export interface ApiUser {
   id: string;

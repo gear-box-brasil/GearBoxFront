@@ -60,7 +60,7 @@ export default function DashboardOwner() {
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const { toast } = useToast();
-  const isOwner = user?.role === "dono";
+  const isOwner = user?.role === "dono" || user?.role === "demo";
   const { t } = useTranslation();
 
   const usersQuery = useQuery({

@@ -52,13 +52,14 @@ const areFormValuesEqual = (nextValues, currentValues) => {
 export function CreateUserModal({
   onSubmit,
   mode = "create",
-  initialData = {},
+  initialData,
   renderTrigger,
   triggerLabel = "Criar novo usuário",
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ ...DEFAULT_VALUES, ...initialData });
+  const buildInitialForm = () => ({ ...DEFAULT_VALUES, ...(initialData ?? {}) });
+  const [form, setForm] = useState(buildInitialForm);
   const { toast } = useToast();
 
   const title = mode === "edit" ? "Editar usuário" : "Novo usuário";
@@ -69,7 +70,7 @@ export function CreateUserModal({
       : "Criar usuário";
   const passwordRequired = mode === "create";
 
-  const resetForm = () => setForm({ ...DEFAULT_VALUES, ...initialData });
+  const resetForm = () => setForm(buildInitialForm());
 
   const handleChange = (key, value) => {
     setForm((state) => ({ ...state, [key]: value }));
@@ -100,7 +101,7 @@ export function CreateUserModal({
   };
 
   useEffect(() => {
-    const nextFormValues = { ...DEFAULT_VALUES, ...initialData };
+    const nextFormValues = buildInitialForm();
 
     setForm((currentForm) =>
       areFormValuesEqual(nextFormValues, currentForm)
@@ -174,6 +175,7 @@ export function CreateUserModal({
               <SelectContent>
                 <SelectItem value="mecanico">Mecânico</SelectItem>
                 <SelectItem value="dono">Administrador</SelectItem>
+                <SelectItem value="demo">Demo</SelectItem>
               </SelectContent>
             </Select>
           </div>

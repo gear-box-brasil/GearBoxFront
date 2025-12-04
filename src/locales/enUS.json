@@ -31,7 +31,8 @@
     },
     "roles": {
       "owner": "Administrator",
-      "mechanic": "Mechanic"
+      "mechanic": "Mechanic",
+      "demo": "Demo"
     },
     "empty": {
       "noData": "No data available",

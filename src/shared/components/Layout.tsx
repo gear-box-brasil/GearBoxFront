@@ -48,37 +48,37 @@ const navigationItems = (t: (key: string) => string) => [
     name: t("navigation.dashboard"),
     href: "/",
     icon: LayoutDashboard,
-    roles: ["dono", "mecanico"],
+    roles: ["dono", "mecanico", "demo"],
   },
   {
     name: t("navigation.orders"),
     href: "/ordens",
     icon: Wrench,
-    roles: ["dono", "mecanico"],
+    roles: ["dono", "mecanico", "demo"],
   },
   {
     name: t("navigation.budgets"),
     href: "/orcamentos",
     icon: FileText,
-    roles: ["dono", "mecanico"],
+    roles: ["dono", "mecanico", "demo"],
   },
   {
     name: t("navigation.clients"),
     href: "/clientes",
     icon: Users,
-    roles: ["dono", "mecanico"],
+    roles: ["dono", "mecanico", "demo"],
   },
   {
     name: t("navigation.vehicles"),
     href: "/veiculos",
     icon: Car,
-    roles: ["dono", "mecanico"],
+    roles: ["dono", "mecanico", "demo"],
   },
   {
     name: t("navigation.ownerPanel"),
     href: "/owner-dashboard",
     icon: Shield,
-    roles: ["dono"],
+    roles: ["dono", "demo"],
   },
 ];
 
@@ -101,9 +101,10 @@ export default function Layout() {
     [t, user?.role],
   );
 
-  const roleLabel: Record<"dono" | "mecanico", string> = {
+  const roleLabel: Record<"dono" | "mecanico" | "demo", string> = {
     dono: t("common.roles.owner"),
     mecanico: t("common.roles.mechanic"),
+    demo: t("common.roles.demo"),
   };
 
   const ariaLabel = collapsed
